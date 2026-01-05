@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+<rect width="640" height="360" fill="#0b1220"/>
+<rect x="160" y="120" rx="12" ry="12" width="320" height="120" fill="#0f1b33" stroke="#1e6cbf"/>
+<rect x="190" y="90" rx="8" ry="8" width="260" height="40" fill="#155ea8"/>
+<rect x="200" y="150" rx="6" ry="6" width="240" height="60" fill="#1e6cbf"/>
+<text x="320" y="60" font-family="Inter, Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="700">BezAssetTracker</text>
+<text x="320" y="320" font-family="Inter, Arial, sans-serif" font-size="14" fill="#81a4e8" text-anchor="middle">Printer Asset</text>
+</svg>

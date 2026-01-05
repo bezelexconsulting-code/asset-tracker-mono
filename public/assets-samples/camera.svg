@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+<rect width="640" height="360" fill="#0b1220"/>
+<rect x="180" y="120" rx="16" ry="16" width="280" height="160" fill="#0f1b33" stroke="#1e6cbf"/>
+<circle cx="320" cy="200" r="46" fill="#1e6cbf"/>
+<circle cx="320" cy="200" r="34" fill="#155ea8"/>
+<rect x="200" y="90" rx="8" ry="8" width="80" height="20" fill="#1e6cbf"/>
+<text x="320" y="60" font-family="Inter, Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="700">BezAssetTracker</text>
+<text x="320" y="320" font-family="Inter, Arial, sans-serif" font-size="14" fill="#81a4e8" text-anchor="middle">Camera Asset</text>
+</svg>
