@@ -9,7 +9,7 @@ export default function SuperLayout() {
     { to: '/super/tickets', label: 'Tickets' },
     { to: '/super/flags', label: 'Flags' },
   ];
-  const isLogin = /\/super\/login\/?$/.test(useLocation().pathname.toLowerCase());
+  const isLogin = useLocation().pathname.toLowerCase().includes('/super/login');
   return (
     <div className="min-h-screen bg-gray-50">
       {isLogin ? (

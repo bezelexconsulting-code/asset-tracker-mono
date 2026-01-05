@@ -749,12 +749,6 @@ function NfcTapHelper({ assets, assetId, onOpenAsset }: { assets: any[]; assetId
   );
 }
 
-function loadDemo() {
-  try {
-    const data = (window as any).bezDemoLoader;
-    if (data && typeof data === 'function') { data(); return; }
-  } catch {}
-}
 
 // removed AddClientForm: client creation is restricted to admins/clients
 

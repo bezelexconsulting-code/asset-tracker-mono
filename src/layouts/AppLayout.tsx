@@ -101,8 +101,8 @@ export default function AppLayout() {
   }
 
   const path = useLocation().pathname.toLowerCase();
-  const isLoginRoute = /\/[^\/]+\/login\/?$/.test(path);
-  const isTechRoute = /\/[^\/]+\/tech(\/|$)/.test(path);
+  const isLoginRoute = path.includes('/login');
+  const isTechRoute = path.includes('/tech');
   return (
     <SettingsProvider org={org || 'demo-org'}>
       <AuthProvider org={org || 'demo-org'}>
