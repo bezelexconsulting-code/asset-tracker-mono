@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
+import React from 'react';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 
 export default function SuperOrgs() {
   const { state, addOrg, updateOrg } = useSuperAdmin();
   const [name, setName] = useState('');
   const [orgId, setOrgId] = useState('');
   const [contact, setContact] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [rows, setRows] = useState<any[]>([]);
+
+  async function load() {
+    if (!SUPABASE_CONFIGURED) return;
+    const { data } = await supabase.from('organizations').select('*').order('created_at', { ascending: false });
+    setRows(data || []);
+  }
+  React.useEffect(() => { load(); }, []);
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded p-4">
@@ -20,13 +32,20 @@ export default function SuperOrgs() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {state.orgs.map((o)=> (
+            {(SUPABASE_CONFIGURED ? rows : state.orgs).map((o:any)=> (
               <tr key={o.id}>
-                <td className="px-4 py-2 text-sm">{o.org_id}</td>
+                <td className="px-4 py-2 text-sm">{o.org_id || o.slug}</td>
                 <td className="px-4 py-2 text-sm">{o.name}</td>
                 <td className="px-4 py-2 text-sm">{o.contact_email}</td>
                 <td className="px-4 py-2 text-sm">
-                  <button className="px-2 py-1 rounded bg-gray-100" onClick={()=> updateOrg(o.id, { active: !o.active })}>{o.active ? 'Deactivate' : 'Activate'}</button>
+                  {SUPABASE_CONFIGURED ? (
+                    <div className="flex items-center space-x-2">
+                      <button className="px-2 py-1 rounded bg-gray-100" onClick={async()=>{ await supabase.from('organizations').update({ active: !o.active }).eq('id', o.id); load(); }}>{o.active ? 'Deactivate' : 'Activate'}</button>
+                      <button className="px-2 py-1 rounded bg-blue-600 text-white" onClick={async()=>{ await supabase.from('organizations').update({ client_username: username||o.client_username, client_password: password||o.client_password, client_force_reset: true }).eq('id', o.id); load(); }}>Set Client Login</button>
+                    </div>
+                  ) : (
+                    <button className="px-2 py-1 rounded bg-gray-100" onClick={()=> updateOrg(o.id, { active: !o.active })}>{o.active ? 'Deactivate' : 'Activate'}</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -41,7 +60,11 @@ export default function SuperOrgs() {
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="Name" value={name} onChange={(e)=>setName(e.target.value)} />
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="Contact Email" value={contact} onChange={(e)=>setContact(e.target.value)} />
         </div>
-        <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={()=>{ if(!orgId || !name) return; addOrg({ org_id: orgId, name, contact_email: contact, active: true }); setOrgId(''); setName(''); setContact(''); }}>Save</button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input className="border border-gray-300 rounded px-3 py-2" placeholder="Client Username" value={username} onChange={(e)=>setUsername(e.target.value)} />
+          <input className="border border-gray-300 rounded px-3 py-2" placeholder="Client Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
+        </div>
+        <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={async()=>{ if(!orgId || !name) return; if (SUPABASE_CONFIGURED) { await supabase.from('organizations').insert({ slug: orgId, name, contact_email: contact, active: true, client_username: username, client_password: password, client_force_reset: true }); setOrgId(''); setName(''); setContact(''); setUsername(''); setPassword(''); load(); } else { addOrg({ org_id: orgId, name, contact_email: contact, active: true }); setOrgId(''); setName(''); setContact(''); } }}>Save</button>
       </div>
     </div>
   );

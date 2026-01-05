@@ -30,10 +30,9 @@ export default function AssetImageUploader({ orgId, assetId, initialUrl, onUploa
     const { data } = supabase.storage.from('assets').getPublicUrl(path);
     const url = data.publicUrl;
     const { error: updateError } = await supabase
-      .from('assets')
+      .from('assets_v2')
       .update({ image_url: url })
-      .eq('id', assetId)
-      .eq('org_id', orgId);
+      .eq('id', assetId);
     if (updateError) {
       setError(updateError.message);
     }

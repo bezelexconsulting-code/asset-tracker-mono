@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Outlet, useParams, useLocation } from 'react-router-dom';
 import { DataProvider } from '../contexts/DataContext';
 import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 export default function AppLayout() {
@@ -53,20 +54,32 @@ export default function AppLayout() {
     const location = useLocation();
     const parts = location.pathname.replace(/^\/+/, '').split('/');
     const isTechRoute = parts[1] === 'tech';
+    const isLoginRoute = parts[1] === 'login';
+    const [branding, setBranding] = React.useState<{ logo_url?: string; primary_color?: string; org_name?: string }>({});
+
+    React.useEffect(() => {
+      (async () => {
+        if (!SUPABASE_CONFIGURED || !org) return;
+        const { data } = await supabase.from('organizations').select('*').eq('slug', org).limit(1);
+        const o = data?.[0];
+        if (o) setBranding({ logo_url: o.branding_logo_url || '', primary_color: o.branding_primary_color || '', org_name: o.name || '' });
+      })();
+    }, [org]);
     React.useEffect(()=>{}, []);
+    if (isLoginRoute) return null;
     return (
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gray-100 border border-gray-200 rounded overflow-hidden flex items-center justify-center">
-              {settings.branding.logo_url ? (
-                <img src={settings.branding.logo_url} alt="Logo" className="w-full h-full object-cover" />
+              {(branding.logo_url || settings.branding.logo_url) ? (
+                <img src={branding.logo_url || settings.branding.logo_url} alt="Logo" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-[10px] text-gray-400">Logo</span>
               )}
             </div>
-            <div className="font-semibold" style={{ color: settings.branding.primary_color || '#111827' }}>
-              {settings.orgProfile.name || 'Organization'}
+            <div className="font-semibold" style={{ color: (branding.primary_color || settings.branding.primary_color || '#111827') }}>
+              {branding.org_name || settings.orgProfile.name || 'Organization'}
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -87,25 +100,34 @@ export default function AppLayout() {
     );
   }
 
+  const path = useLocation().pathname.toLowerCase();
+  const isLoginRoute = /\/[^\/]+\/login\/?$/.test(path);
+  const isTechRoute = /\/[^\/]+\/tech(\/|$)/.test(path);
   return (
     <SettingsProvider org={org || 'demo-org'}>
       <AuthProvider org={org || 'demo-org'}>
         <DataProvider org={org || 'demo-org'}>
           <div className="min-h-screen bg-gray-50">
-            <BrandHeader org={org} />
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
-            {(() => { const p = useLocation().pathname.replace(/^\/+/, '').split('/'); return p[1] === 'tech'; })() ? null : (
-              <aside className="col-span-12 lg:col-span-3">
-                <SidebarNav nav={nav} />
-              </aside>
+            {!isLoginRoute && <BrandHeader org={org} />}
+            {isLoginRoute ? (
+              <main className="max-w-md mx-auto px-4 py-10">
+                <Outlet />
+              </main>
+            ) : (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
+                {isTechRoute ? null : (
+                  <aside className="col-span-12 lg:col-span-3">
+                    <SidebarNav nav={nav} />
+                  </aside>
+                )}
+                <main className="col-span-12 lg:col-span-9">
+                  <Outlet />
+                </main>
+              </div>
             )}
-            <main className="col-span-12 lg:col-span-9">
-              <Outlet />
-            </main>
           </div>
-        </div>
-      </DataProvider>
-    </AuthProvider>
+        </DataProvider>
+      </AuthProvider>
     </SettingsProvider>
   );
 }

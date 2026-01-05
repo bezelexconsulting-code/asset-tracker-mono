@@ -27,6 +27,8 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "bcryptjs": "^2.4.3",
+    "vite-plugin-pwa": "^0.20.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.0.0",
     "@types/react": "^18.2.37",

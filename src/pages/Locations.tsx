@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { MapPinIcon, BuildingOfficeIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 export default function Locations() {
@@ -12,9 +13,19 @@ export default function Locations() {
   const [form, setForm] = useState<{ name: string; address?: string; client_id?: string }>({ name: '', address: '', client_id: '' });
 
   useEffect(() => {
-    setLocations(listLocations());
-    setClients(listClients());
-  }, [listLocations, listClients]);
+    (async () => {
+      if (SUPABASE_CONFIGURED) {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data } = await supabase.from('locations').select('*').eq('org_id', orgId).order('name');
+        setLocations((data||[]) as any);
+        setClients([]);
+      } else {
+        setLocations(listLocations());
+        setClients(listClients());
+      }
+    })();
+  }, [listLocations, listClients, org]);
 
   return (
     <div className="space-y-6">
@@ -36,22 +47,32 @@ export default function Locations() {
               <label className="text-sm text-gray-700">Address</label>
               <input className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </div>
-            <div>
-              <label className="text-sm text-gray-700">Client</label>
-              <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
-                <option value="">Unassigned</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+            {!SUPABASE_CONFIGURED && (
+              <div>
+                <label className="text-sm text-gray-700">Client</label>
+                <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
+                  <option value="">Unassigned</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex space-x-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!form.name) return;
-                const created = addLocation({ name: form.name, address: form.address, client_id: form.client_id || undefined });
-                setLocations([created, ...locations]);
+                if (SUPABASE_CONFIGURED) {
+                  const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+                  const orgId = orgRow?.[0]?.id;
+                  const { data, error } = await supabase.from('locations').insert({ org_id: orgId, name: form.name, address: form.address || '' }).select('*');
+                  if (error) return;
+                  setLocations([...(data||[]), ...locations]);
+                } else {
+                  const created = addLocation({ name: form.name, address: form.address, client_id: form.client_id || undefined });
+                  setLocations([created, ...locations]);
+                }
                 setShowForm(false);
                 setForm({ name: '', address: '', client_id: '' });
               }}
@@ -78,7 +99,9 @@ export default function Locations() {
                   <div className="flex items-center"><MapPinIcon className="h-5 w-5 text-gray-400 mr-2" />{l.name}</div>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <div className="flex items-center"><BuildingOfficeIcon className="h-5 w-5 text-gray-400 mr-2" />{clients.find((c) => c.id === l.client_id)?.name || 'Unassigned'}</div>
+                  {!SUPABASE_CONFIGURED && (
+                    <div className="flex items-center"><BuildingOfficeIcon className="h-5 w-5 text-gray-400 mr-2" />{clients.find((c) => c.id === l.client_id)?.name || 'Unassigned'}</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm">{l.address || '—'}</td>
               </tr>

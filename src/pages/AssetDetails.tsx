@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { SUPABASE_CONFIGURED } from '../lib/supabase';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { useData } from '../contexts/DataContext';
 import AssetImageUploader from '../components/AssetImageUploader';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
@@ -16,16 +16,27 @@ export default function AssetDetails() {
   const { listClients, listAssets, updateAsset, listLocations } = useData();
 
   useEffect(() => {
-    setLoading(true);
-    const cls = listClients();
-    setClients(cls);
-    const as = listAssets();
-    const found = as.find((a) => a.id === id);
-    if (found) {
-      setAsset(found);
-      setForm({ name: found.name || '', asset_tag: found.asset_tag || '', client_id: found.client_id || '', location: found.location_id || '', description: found.description || '' });
-    }
-    setLoading(false);
+    (async () => {
+      setLoading(true);
+      if (SUPABASE_CONFIGURED) {
+        const { data } = await supabase.from('assets_unified').select('*').eq('id', id).limit(1);
+        const found = data?.[0];
+        if (found) {
+          setAsset(found);
+          setForm({ name: found.name || '', asset_tag: found.asset_tag || '', client_id: '', location: found.location_id || '', description: found.description || '' });
+        }
+      } else {
+        const cls = listClients();
+        setClients(cls);
+        const as = listAssets();
+        const found = as.find((a) => a.id === id);
+        if (found) {
+          setAsset(found);
+          setForm({ name: found.name || '', asset_tag: found.asset_tag || '', client_id: found.client_id || '', location: found.location_id || '', description: found.description || '' });
+        }
+      }
+      setLoading(false);
+    })();
   }, [listClients, listAssets, id]);
 
   return (
@@ -34,11 +45,7 @@ export default function AssetDetails() {
         <h1 className="text-2xl font-bold text-gray-900">Asset Details</h1>
         <Link to={`/${org}/assets`} className="text-sm text-blue-600">Back to Assets</Link>
       </div>
-      {!SUPABASE_CONFIGURED && (
-        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded text-sm text-yellow-800">
-          Showing demo asset. Configure Supabase to load real data.
-        </div>
-      )}
+      {/* Demo banner removed in production */}
       {asset && (
         <div className="flex items-center justify-between">
           <AssetImageUploader
@@ -64,14 +71,19 @@ export default function AssetDetails() {
               <div className="text-sm text-gray-500">Name</div>
               <div className="mt-1">{asset.name}</div>
             </div>
-            <div>
-              <div className="text-sm text-gray-500">Client</div>
-              <div className="mt-1">{clients.find(c => c.id === asset.client_id)?.name || 'Unassigned'}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Location</div>
-              <div className="mt-1">{listLocations(asset.client_id).find((l) => l.id === asset.location_id)?.name || '—'}</div>
-            </div>
+            {!SUPABASE_CONFIGURED && (
+              <div>
+                <div className="text-sm text-gray-500">Client</div>
+                <div className="mt-1">{clients.find(c => c.id === asset.client_id)?.name || 'Unassigned'}</div>
+              </div>
+            )}
+            {/* Location name (local only) */}
+            {!SUPABASE_CONFIGURED && (
+              <div>
+                <div className="text-sm text-gray-500">Location</div>
+                <div className="mt-1">{listLocations(asset.client_id).find((l) => l.id === asset.location_id)?.name || '—'}</div>
+              </div>
+            )}
             <div>
               <div className="text-sm text-gray-500">Status</div>
               <div className="mt-1">
@@ -99,24 +111,28 @@ export default function AssetDetails() {
               <label className="text-sm text-gray-700">Name</label>
               <input className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
-            <div>
-              <label className="text-sm text-gray-700">Client</label>
-              <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
-                <option value="">Unassigned</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">Location</label>
-              <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
-                <option value="">Unassigned</option>
-                {listLocations(form.client_id || undefined).map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-            </div>
+            {!SUPABASE_CONFIGURED && (
+              <div>
+                <label className="text-sm text-gray-700">Client</label>
+                <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
+                  <option value="">Unassigned</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {!SUPABASE_CONFIGURED && (
+              <div>
+                <label className="text-sm text-gray-700">Location</label>
+                <select className="mt-1 w-full border border-gray-300 rounded px-3 py-2" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
+                  <option value="">Unassigned</option>
+                  {listLocations(form.client_id || undefined).map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <label className="text-sm text-gray-700">Description</label>
               <textarea className="mt-1 w-full border border-gray-300 rounded px-3 py-2" rows={3} value={form.description || ''} onChange={(e)=> setForm({ ...form, description: e.target.value })} />
@@ -126,8 +142,14 @@ export default function AssetDetails() {
             <button
               onClick={async () => {
                 setError(null);
-                updateAsset(String(id), { name: form.name, asset_tag: form.asset_tag, client_id: form.client_id || undefined, location_id: form.location || undefined, description: form.description || '' });
-                setAsset({ ...asset, name: form.name, asset_tag: form.asset_tag, client_id: form.client_id || undefined, location_id: form.location || undefined, description: form.description || '' });
+                if (SUPABASE_CONFIGURED) {
+                  const { error } = await supabase.from('assets_v2').update({ name: form.name, asset_tag: form.asset_tag, description: form.description || '' }).eq('id', id);
+                  if (error) { setError(String(error.message)); return; }
+                  setAsset({ ...asset, name: form.name, asset_tag: form.asset_tag, description: form.description || '' });
+                } else {
+                  updateAsset(String(id), { name: form.name, asset_tag: form.asset_tag, client_id: form.client_id || undefined, location_id: form.location || undefined, description: form.description || '' });
+                  setAsset({ ...asset, name: form.name, asset_tag: form.asset_tag, client_id: form.client_id || undefined, location_id: form.location || undefined, description: form.description || '' });
+                }
                 setEditing(false);
               }}
               className="px-3 py-2 rounded bg-blue-600 text-white"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { SUPABASE_CONFIGURED } from '../lib/supabase';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { useData } from '../contexts/DataContext';
 import { UserIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
@@ -24,23 +24,27 @@ export default function Technicians() {
   const [addAssetForm, setAddAssetForm] = useState<{ name:string; asset_tag:string }>({ name:'', asset_tag:'' });
 
   useEffect(() => {
-    setLoading(true);
-    setTechs(listTechnicians());
-    setLoading(false);
-  }, [listTechnicians]);
+    (async () => {
+      setLoading(true);
+      if (SUPABASE_CONFIGURED) {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
+        setTechs((data||[]) as any);
+      } else {
+        setTechs(listTechnicians());
+      }
+      setLoading(false);
+    })();
+  }, [listTechnicians, org]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Technicians</h1>
-        <div className="space-x-2">
-          <button className="px-3 py-2 rounded bg-gray-900 text-white" onClick={()=>{ try { const loader=(window as any).bezDemoLoader; if(typeof loader==='function') loader(); setTechs(listTechnicians()); } catch {} }}>Load Demo Data</button>
-          <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={()=>{ try { const raw = localStorage.getItem('bez-superadmin'); const data = raw ? JSON.parse(raw) : { requests: [] }; const req = { id: `id_${Date.now()}`, org_id: org, requester_email: 'demo@org', note: 'Technician requested from Technicians page', status: 'pending', created_at: new Date().toISOString() }; data.requests = [req, ...(data.requests||[])]; localStorage.setItem('bez-superadmin', JSON.stringify(data)); alert('Technician request sent'); } catch {} }}>Request Technician</button>
-        </div>
+        <div className="space-x-2"></div>
       </div>
-      {!SUPABASE_CONFIGURED && (
-        <div className="p-3 border border-yellow-200 bg-yellow-50 rounded text-sm text-yellow-800">Showing demo technicians. Configure Supabase to use live data.</div>
-      )}
+      {/* Demo banner removed in production */}
       <div className="text-sm text-gray-600">Assign jobs to technicians directly from this list.</div>
       <div className="bg-white border border-gray-200 rounded">
         <table className="min-w-full divide-y divide-gray-200">

@@ -59,7 +59,6 @@ export default function Clients() {
           <button onClick={() => setShowForm(true)} className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 text-white mr-2">
             <PlusIcon className="h-4 w-4 mr-2" /> Add Client
           </button>
-          <button onClick={()=>{ try { const loader = (window as any).bezDemoLoader; if (typeof loader === 'function') loader(); setClients(listClients()); } catch {} }} className="inline-flex items-center px-3 py-2 rounded-md bg-gray-900 text-white">Load Demo Data</button>
         </div>
       </div>
 

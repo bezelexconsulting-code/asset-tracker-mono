@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SUPABASE_CONFIGURED } from '../lib/supabase';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { useData } from '../contexts/DataContext';
 import { Link, useParams } from 'react-router-dom';
 import AssetImageUploader from '../components/AssetImageUploader';
@@ -60,14 +60,26 @@ export default function AssetsList() {
   }
 
   useEffect(() => {
-    setLoading(true);
-    const cls = listClients();
-    setClients(cls);
-    const as = listAssets(selectedClient || undefined);
-    setAssets(as);
-    setCategories(listCategories());
-    setLoading(false);
-  }, [listClients, listAssets, selectedClient, listCategories]);
+    (async () => {
+      setLoading(true);
+      if (SUPABASE_CONFIGURED) {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data: as } = await supabase.from('assets_unified').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
+        const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name');
+        setAssets((as||[]) as any);
+        setCategories(cats||[]);
+        setClients([]);
+      } else {
+        const cls = listClients();
+        setClients(cls);
+        const as = listAssets(selectedClient || undefined);
+        setAssets(as);
+        setCategories(listCategories());
+      }
+      setLoading(false);
+    })();
+  }, [org, selectedClient, listClients, listAssets, listCategories]);
 
   const filteredAssets = assets.filter(a => {
     const matchesSearch = searchQuery === '' || 
@@ -122,11 +134,6 @@ export default function AssetsList() {
             </button>
           </div>
 
-          {!SUPABASE_CONFIGURED && (
-            <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-              Showing demo assets. Configure Supabase to load real data.
-            </div>
-          )}
           {error && (
             <div className="p-3 border border-red-200 bg-red-50 rounded-lg text-sm text-red-800">{error}</div>
           )}
@@ -144,16 +151,18 @@ export default function AssetsList() {
             </div>
             
             <div className="flex items-center gap-3">
-              <select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">All clients</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {!SUPABASE_CONFIGURED && (
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="">All clients</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
               
               <select value={selectedCategory} onChange={(e)=>setSelectedCategory(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                 <option value="">All categories</option>
@@ -179,7 +188,7 @@ export default function AssetsList() {
             </div>
           </div>
 
-          <button onClick={loadDemo} className="inline-flex items-center px-3 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-800 transition-colors">Load Demo Data</button>
+          {/* Demo data removed in production */}
         </>
       ) : (
         <>
@@ -316,7 +325,7 @@ export default function AssetsList() {
               <label className="block text-sm font-medium text-gray-700 mb-2">New Category</label>
               <div className="flex items-center space-x-2">
                 <input className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Category name" value={createForm.category_name || ''} onChange={(e)=> setCreateForm({ ...createForm, category_name: e.target.value })} />
-                <button className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors" onClick={()=>{ if(!createForm.category_name) return; const cat = addCategory({ name: createForm.category_name }); setCreateForm({ ...createForm, category_id: cat.id, category_name: '' }); setCategories(listCategories()); }}>Add</button>
+                <button className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors" onClick={async()=>{ if(!createForm.category_name) return; if (SUPABASE_CONFIGURED) { const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org); const orgId = orgRow?.[0]?.id; const { data } = await supabase.from('categories').insert({ org_id: orgId, name: createForm.category_name }).select('*'); setCreateForm({ ...createForm, category_id: data?.[0]?.id, category_name: '' }); const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name'); setCategories(cats||[]); } else { const cat = addCategory({ name: createForm.category_name }); setCreateForm({ ...createForm, category_id: cat.id, category_name: '' }); setCategories(listCategories()); } }}>Add</button>
               </div>
             </div>
             
@@ -334,8 +343,16 @@ export default function AssetsList() {
                 if (!createForm.asset_tag || !createForm.name) { setError('Asset tag and name are required'); return; }
                 let imgUrl = createForm.image_url || '';
                 if (imgUrl) { imgUrl = await watermarkImage(imgUrl, `${new Date().toLocaleString()} • ${createForm.asset_tag || createForm.name}`); }
-                const created = addAsset({ asset_tag: createForm.asset_tag, name: createForm.name, client_id: createForm.client_id || undefined, location_id: createForm.location_id || undefined, category_id: createForm.category_id || undefined, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || undefined });
-                setAssets([created, ...assets]);
+                if (SUPABASE_CONFIGURED) {
+                  const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+                  const orgId = orgRow?.[0]?.id;
+                  const { data, error } = await supabase.from('assets_v2').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
+                  if (error) { setError(String(error.message)); return; }
+                  setAssets([...(data||[]), ...assets]);
+                } else {
+                  const created = addAsset({ asset_tag: createForm.asset_tag, name: createForm.name, client_id: createForm.client_id || undefined, location_id: createForm.location_id || undefined, category_id: createForm.category_id || undefined, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || undefined });
+                  setAssets([created, ...assets]);
+                }
                 setShowCreate(false);
                 setCreateForm({ asset_tag: '', name: '', client_id: '', location_id: '', category_id: '', category_name: '', description: '', image_url: '', status: 'available' } as any);
               }}

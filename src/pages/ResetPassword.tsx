@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 export default function ResetPassword() {
   const { org } = useParams();
@@ -19,21 +21,22 @@ export default function ResetPassword() {
     if (!pw || pw.length < 6) { setError('Password must be at least 6 characters'); return; }
     if (pw !== confirm) { setError('Passwords do not match'); return; }
     if (user === 'client') {
-      try {
-        const raw = localStorage.getItem('bez-superadmin');
-        const data = raw ? JSON.parse(raw) : { orgs: [] };
-        const orgs = (data.orgs || []).map((o: any) => {
-          if (o.org_id !== org) return o;
-          return { ...o, client_credentials: { ...(o.client_credentials||{}), password: pw }, client_force_reset: false };
-        });
-        localStorage.setItem('bez-superadmin', JSON.stringify({ ...data, orgs }));
+      if (SUPABASE_CONFIGURED) {
+        const { data } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = data?.[0]?.id; if (!orgId) { setError('Org not found'); return; }
+        const hashed = bcrypt.hashSync(pw, 10);
+        await supabase.from('organizations').update({ client_password: '', client_hashed_password: hashed, client_force_reset: false }).eq('id', orgId);
         navigate(`/${org}/dashboard`);
-      } catch {
-        setError('Failed to update password');
+        return;
       }
-      return;
+      setError('Supabase not configured'); return;
     }
     if (user === 'tech' && techId) {
+      if (SUPABASE_CONFIGURED) {
+        const hashed = bcrypt.hashSync(pw, 10);
+        await supabase.from('technicians').update({ password: '', hashed_password: hashed, must_reset_password: false }).eq('id', techId);
+        navigate(`/${org}/technicians/${techId}`); return;
+      }
       updateTechnician(techId, { password: pw, must_reset_password: false } as any);
       navigate(`/${org}/technicians/${techId}`);
       return;

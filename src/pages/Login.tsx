@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 export default function Login() {
   const { org } = useParams();
@@ -27,37 +29,25 @@ export default function Login() {
         setEmail(t.email || '');
       }
     }
-    if (demo === '1') {
-      try { const loader = (window as any).bezDemoLoader; if (typeof loader === 'function') loader(); } catch {}
-      login({ id: `admin_${Date.now()}`, email: 'demo@example.com', role: 'admin', name: settings.orgProfile.name });
-      navigate(`/${org}/dashboard`);
-    }
+    // demo autologin removed for production
   }, [listTechnicians]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!email) { setError('Email is required'); return; }
     if (role === 'admin') {
-      try {
-        const raw = localStorage.getItem('bez-superadmin');
-        if (raw) {
-          const data = JSON.parse(raw);
-          const orgRec = (data.orgs || []).find((o: any) => o.org_id === org);
-          if (orgRec && orgRec.client_credentials) {
-            const u = orgRec.client_credentials.username || '';
-            const p = orgRec.client_credentials.password || '';
-            if (!password || password !== p || (email !== orgRec.contact_email && email !== u)) {
-              setError('Invalid credentials');
-              return;
-            }
-            if (orgRec.client_force_reset) {
-              navigate(`/${org}/reset-password?user=client`);
-              return;
-            }
-          }
-        }
-      } catch {}
+      if (SUPABASE_CONFIGURED) {
+        const { data } = await supabase.from('organizations').select('*').eq('slug', org);
+        const orgRec = data?.[0];
+        if (!orgRec) { setError('Organization not found'); return; }
+        const u = orgRec.client_username || '';
+        const p = orgRec.client_password || '';
+        const hp = orgRec.client_hashed_password || '';
+        const passOk = hp ? bcrypt.compareSync(password, hp) : password === p;
+        if (!password || !passOk || (email !== orgRec.contact_email && email !== u)) { setError('Invalid credentials'); return; }
+        if (orgRec.client_force_reset) { navigate(`/${org}/reset-password?user=client`); return; }
+      }
       login({ id: `admin_${Date.now()}`, email, role: 'admin', name: settings.orgProfile.name });
       navigate(`/${org}/dashboard`);
       return;
@@ -65,21 +55,17 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search);
     const techId = params.get('tech');
     let techs = listTechnicians();
-    // seed technicians from Super Admin store if present for this org
-    try {
-      const raw = localStorage.getItem('bez-superadmin');
-      const data = raw ? JSON.parse(raw) : {};
-      const sTechs = (data.techs || []).filter((st: any) => st.org_id === org);
-      for (const st of sTechs) {
-        if (!techs.find((x) => x.username === st.username || x.email === st.email)) {
-          addTechnician({ name: st.full_name, email: st.email, username: st.username, password: st.password, status: 'active', must_reset_password: st.must_reset_password });
-        }
-      }
-      techs = listTechnicians();
-    } catch {}
+    if (SUPABASE_CONFIGURED) {
+      const { data: orgs } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgs?.[0]?.id;
+      const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId);
+      techs = data || [] as any;
+    }
+    // demo technician seeding removed for production
     let t = techId ? techs.find((x) => x.id === techId) : null;
-    if (!t) t = techs.find((x) => x.email === email || x.username === email) || null;
-    if (t && t.password && password !== t.password) { setError('Invalid credentials'); return; }
+    if (!t) t = techs.find((x:any) => x.email === email || x.username === email) || null;
+    const passOk = t ? ((t.hashed_password ? bcrypt.compareSync(password, t.hashed_password) : (t.password && password === t.password))) : false;
+    if (t && !passOk) { setError('Invalid credentials'); return; }
     if (t && (t as any).must_reset_password) {
       navigate(`/${org}/reset-password?user=tech&tech=${t.id}`);
       return;

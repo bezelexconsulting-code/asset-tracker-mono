@@ -72,43 +72,20 @@ export default function ClientCheckInOut() {
 
   const loadInitialData = async () => {
     if (!SUPABASE_CONFIGURED || !user) return;
-
     try {
       setLoading(true);
-      
-      // Load locations
-      const { data: locationsData } = await supabase
-        .from('locations')
-        .select('id, name')
-        .eq('org_id', org);
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      const { data: locationsData } = await supabase.from('locations').select('id,name').eq('org_id', orgId);
       setLocations(locationsData || []);
-
-      // Load relevant assets based on mode
-      let query = supabase
-        .from('assets')
-        .select(`
-          *,
-          category:categories(name),
-          location:locations(name),
-          assigned_to:users(full_name),
-          nfc_tags!inner(tag_id)
-        `)
-        .eq('org_id', org);
-
+      let { data: assetsData } = await supabase.from('assets_unified').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
       if (mode === 'checkin') {
-        // Show assets assigned to this user
-        query = query.eq('assigned_to_id', user.id).eq('status', 'checked_out');
+        assetsData = (assetsData || []).filter(a => a.status === 'checked_out');
       } else {
-        // Show available assets
-        query = query.eq('status', 'available');
+        assetsData = (assetsData || []).filter(a => a.status === 'available');
       }
-
-      const { data: assetsData, error: assetsError } = await query;
-
-      if (assetsError) throw assetsError;
-      setAssets(assetsData || []);
+      setAssets((assetsData || []) as any);
     } catch (err) {
-      console.error('Error loading data:', err);
       setError('Failed to load assets');
     } finally {
       setLoading(false);
@@ -136,65 +113,17 @@ export default function ClientCheckInOut() {
 
       const now = new Date().toISOString();
       
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
       if (mode === 'checkin') {
-        // Check in asset
-        const { error: updateError } = await supabase
-          .from('assets')
-          .update({
-            status: 'available',
-            assigned_to_id: null,
-            updated_at: now
-          })
-          .eq('id', selectedAsset.id);
-
+        const { error: updateError } = await supabase.from('assets_v2').update({ status: 'available', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
-
-        // Create transaction record
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert({
-            org_id: org,
-            asset_id: selectedAsset.id,
-            user_id: user.id,
-            transaction_type: 'checkin',
-            from_location_id: selectedAsset.location,
-            to_location_id: formData.location_id,
-            condition: formData.condition,
-            notes: formData.notes,
-            created_at: now
-          });
-
+        const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_in', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
         if (transactionError) throw transactionError;
       } else {
-        // Check out asset
-        const { error: updateError } = await supabase
-          .from('assets')
-          .update({
-            status: 'checked_out',
-            assigned_to_id: user.id,
-            updated_at: now
-          })
-          .eq('id', selectedAsset.id);
-
+        const { error: updateError } = await supabase.from('assets_v2').update({ status: 'checked_out', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
-
-        // Create transaction record
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert({
-            org_id: org,
-            asset_id: selectedAsset.id,
-            user_id: user.id,
-            transaction_type: 'checkout',
-            from_location_id: selectedAsset.location,
-            to_location_id: formData.location_id,
-            expected_return_date: formData.expected_return_date,
-            purpose: formData.purpose,
-            condition: formData.condition,
-            notes: formData.notes,
-            created_at: now
-          });
-
+        const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_out', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
         if (transactionError) throw transactionError;
       }
 
