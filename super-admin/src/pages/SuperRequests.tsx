@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 function AddTechInline({ orgId, onSaved }: { orgId: string; onSaved: ()=>void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [tempPw, setTempPw] = useState('');
   if (!SUPABASE_CONFIGURED) return null as any;
   return (
     <div className="mt-2">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
         <input placeholder="Full name" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={name} onChange={(e)=> setName(e.target.value)} />
         <input placeholder="Email" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={email} onChange={(e)=> setEmail(e.target.value)} />
         <input placeholder="Username" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={username} onChange={(e)=> setUsername(e.target.value)} />
+        <input placeholder="Temporary Password" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" type="password" value={tempPw} onChange={(e)=> setTempPw(e.target.value)} />
       </div>
-      <button className="mt-2 px-3 py-2 rounded bg-blue-600 text-white text-sm" onClick={async()=>{ if(!name) return; await supabase.from('technicians').insert({ org_id: orgId, full_name: name, email, username, is_active: true }); onSaved(); setName(''); setEmail(''); setUsername(''); }}>Save Technician</button>
+      <button className="mt-2 px-3 py-2 rounded bg-blue-600 text-white text-sm" onClick={async()=>{ if(!name) return; const hashed = tempPw ? bcrypt.hashSync(tempPw, 10) : null; await supabase.from('technicians').insert({ org_id: orgId, full_name: name, email, username, is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed }); onSaved(); setName(''); setEmail(''); setUsername(''); setTempPw(''); }}>Save Technician</button>
     </div>
   );
 }

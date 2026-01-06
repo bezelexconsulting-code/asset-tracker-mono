@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
 import React from 'react';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 function AddTechInline({ orgId, onSaved }: { orgId: string; onSaved?: ()=>void }) {
   const [name, setName] = useState('');
@@ -28,7 +29,7 @@ export default function SuperOrgs() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rows, setRows] = useState<any[]>([]);
-  const [firstTech, setFirstTech] = useState<{ name: string; email: string; username: string }>({ name: '', email: '', username: '' });
+  const [firstTech, setFirstTech] = useState<{ name: string; email: string; username: string; password?: string }>({ name: '', email: '', username: '', password: '' });
 
   async function load() {
     if (!SUPABASE_CONFIGURED) return;
@@ -89,12 +90,13 @@ export default function SuperOrgs() {
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="Client Username" value={username} onChange={(e)=>setUsername(e.target.value)} />
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="Client Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="First Tech Name (optional)" value={firstTech.name} onChange={(e)=> setFirstTech({ ...firstTech, name: e.target.value })} />
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="First Tech Email" value={firstTech.email} onChange={(e)=> setFirstTech({ ...firstTech, email: e.target.value })} />
           <input className="border border-gray-300 rounded px-3 py-2" placeholder="First Tech Username" value={firstTech.username} onChange={(e)=> setFirstTech({ ...firstTech, username: e.target.value })} />
+          <input className="border border-gray-300 rounded px-3 py-2" placeholder="Temporary Password" type="password" value={firstTech.password} onChange={(e)=> setFirstTech({ ...firstTech, password: e.target.value })} />
         </div>
-        <button className="px-3 py-2 rounded bg-blue-600 text-white mt-3" onClick={async()=>{ if(!orgId || !name) return; if (SUPABASE_CONFIGURED) { const { data } = await supabase.from('organizations').insert({ slug: orgId, name, contact_email: contact, active: true, client_username: username, client_password: password, client_force_reset: true }).select('id'); const newOrgId = data?.[0]?.id; if (newOrgId && firstTech.name) { await supabase.from('technicians').insert({ org_id: newOrgId, full_name: firstTech.name, email: firstTech.email, username: firstTech.username, is_active: true }); } setOrgId(''); setName(''); setContact(''); setUsername(''); setPassword(''); setFirstTech({ name:'', email:'', username:'' }); load(); } else { addOrg({ org_id: orgId, name, contact_email: contact, active: true }); setOrgId(''); setName(''); setContact(''); } }}>Save</button>
+        <button className="px-3 py-2 rounded bg-blue-600 text-white mt-3" onClick={async()=>{ if(!orgId || !name) return; if (SUPABASE_CONFIGURED) { const { data } = await supabase.from('organizations').insert({ slug: orgId, name, contact_email: contact, active: true, client_username: username, client_password: password, client_force_reset: true }).select('id'); const newOrgId = data?.[0]?.id; if (newOrgId && firstTech.name) { const hashed = firstTech.password ? bcrypt.hashSync(firstTech.password, 10) : null; await supabase.from('technicians').insert({ org_id: newOrgId, full_name: firstTech.name, email: firstTech.email, username: firstTech.username, is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed }); } setOrgId(''); setName(''); setContact(''); setUsername(''); setPassword(''); setFirstTech({ name:'', email:'', username:'', password:'' }); load(); } else { addOrg({ org_id: orgId, name, contact_email: contact, active: true }); setOrgId(''); setName(''); setContact(''); } }}>Save</button>
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import bcrypt from 'bcryptjs';
 
 export default function SuperTechs() {
   const [orgs, setOrgs] = useState<any[]>([]);
   const [orgId, setOrgId] = useState<string>('');
   const [rows, setRows] = useState<any[]>([]);
-  const [form, setForm] = useState<{ full_name: string; email?: string; username?: string; specialization?: string }>({ full_name: '', email: '', username: '', specialization: '' });
+  const [form, setForm] = useState<{ full_name: string; email?: string; username?: string; specialization?: string; temp_password?: string }>({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(()=>{ (async()=>{ if (!SUPABASE_CONFIGURED) return; const { data } = await supabase.from('organizations').select('id,name,slug').order('name'); setOrgs(data||[]); })(); }, []);
@@ -15,9 +16,10 @@ export default function SuperTechs() {
   async function addTech() {
     setError(null);
     if (!orgId || !form.full_name) { setError('Select org and name'); return; }
-    const { error: err } = await supabase.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true });
+    const hashed = form.temp_password ? bcrypt.hashSync(form.temp_password, 10) : null;
+    const { error: err } = await supabase.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
     if (err) { setError(err.message); return; }
-    setForm({ full_name: '', email: '', username: '', specialization: '' });
+    setForm({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
     load();
   }
   async function toggleActive(id: string, active: boolean) { await supabase.from('technicians').update({ is_active: !active }).eq('id', id); load(); }
