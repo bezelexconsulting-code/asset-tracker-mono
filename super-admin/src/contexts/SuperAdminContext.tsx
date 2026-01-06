@@ -158,12 +158,12 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       const { data: orgs } = await supabase.from('organizations').select('*').order('created_at', { ascending: false });
       setState((s)=> ({ ...s, orgs: (orgs||[]).map((o:any)=> ({ id:o.id, org_id:o.slug, name:o.name, contact_email:o.contact_email, active:o.active })) }));
       const { data: reqs } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
-      setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at })) }));
+      setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at, org_slug: r.org_slug })) }));
     })();
     const channel = supabase.channel('super-admin-requests')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, async (payload:any) => {
         const r = payload.new;
-        setState((s)=> ({ ...s, requests: [{ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at }, ...s.requests], user_changes: s.user_changes }));
+        setState((s)=> ({ ...s, requests: [{ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at, org_slug: r.org_slug }, ...s.requests], user_changes: s.user_changes }));
         setNotify(`New request received`);
         try {
           const { data: orgs } = await supabase.from('organizations').select('id, name, slug, contact_email, contact_phone').eq('id', r.org_id).limit(1);

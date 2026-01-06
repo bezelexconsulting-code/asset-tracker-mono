@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 import { useSettings } from '../contexts/SettingsContext';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -8,7 +9,22 @@ export default function UsersRoles() {
   const { org } = useParams();
   const { settings } = useSettings();
   const { listTechnicians } = useData();
-  const techs = listTechnicians();
+  const [techs, setTechs] = useState<any[]>(listTechnicians());
+  useEffect(()=>{
+    (async ()=>{
+      if (!SUPABASE_CONFIGURED) { setTechs(listTechnicians()); return; }
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name');
+      setTechs(data||[]);
+      supabase.channel(`techs_${orgId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, (payload:any)=>{
+          // Reload list on change for simplicity
+          supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name').then(({ data })=> setTechs(data||[]));
+        })
+        .subscribe();
+    })();
+  }, [org]);
 
   const supportEmail = settings.billing.support_email || 'support@example.com';
   const seats = settings.billing.technician_seats || 0;
@@ -32,9 +48,19 @@ export default function UsersRoles() {
           <div className="text-sm text-gray-700">Technician slots: <span className="font-semibold">{seats}</span></div>
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Self-add disabled</span>
         </div>
-        <p className="text-sm text-gray-600">To add a technician, please contact us. Technicians can download the app using the links below after we enable seats for your organization.</p>
+        <p className="text-sm text-gray-600">To add a technician, click Request Technician; Super Admin will receive it immediately.</p>
         <div className="flex items-center space-x-2">
-          <a href={`mailto:${supportEmail}?subject=Technician request for ${org}`} className="px-3 py-2 rounded bg-blue-600 text-white">Request Technician</a>
+          <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={async()=>{
+            if (SUPABASE_CONFIGURED) {
+              const { data: orgRow } = await supabase.from('organizations').select('id, slug').eq('slug', org);
+              const orgId = orgRow?.[0]?.id;
+              await supabase.from('requests').insert({ org_id: orgId, org_slug: org, requester_email: settings.orgProfile.contact_email || '', note: 'Technician requested from Users & Roles', status: 'pending' });
+              fetch('/api/send-email', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ to: supportEmail, subject: `Technician request for ${org}`, html: `<p>New technician request for <b>${org}</b></p>` }) }).catch(()=>{});
+              alert('Request sent');
+              return;
+            }
+            window.location.href = `mailto:${supportEmail}?subject=Technician request for ${org}`;
+          }}>Request Technician</button>
           <Link to={`/${org}/tech`} className="px-3 py-2 rounded bg-gray-900 text-white">Open Technician Download Page</Link>
         </div>
       </div>

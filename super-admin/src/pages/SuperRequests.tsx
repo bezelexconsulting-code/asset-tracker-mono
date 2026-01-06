@@ -42,7 +42,7 @@ export default function SuperRequests() {
           <tbody className="bg-white divide-y divide-gray-200">
             {requests.map((r)=> (
               <tr key={r.id}>
-                <td className="px-4 py-2 text-sm">{r.org_id}</td>
+                <td className="px-4 py-2 text-sm">{(r as any).org_slug || r.org_id}</td>
                 <td className="px-4 py-2 text-sm">{r.requester_email}</td>
                 <td className="px-4 py-2 text-sm">{r.note}</td>
                 <td className="px-4 py-2 text-sm">{r.status}</td>

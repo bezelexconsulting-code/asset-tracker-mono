@@ -27,10 +27,11 @@ export default function Dashboard() {
   const vatRate = 0.15;
   async function makeTechRequest() {
     if (SUPABASE_CONFIGURED) {
-      const { data: orgRow } = await supabase.from('organizations').select('id, contact_phone').eq('slug', org);
+      const { data: orgRow } = await supabase.from('organizations').select('id, slug, contact_phone').eq('slug', org);
       const orgId = orgRow?.[0]?.id;
       const phone = (orgRow?.[0] as any)?.contact_phone || settings.orgProfile.contact_phone || '';
-      await supabase.from('requests').insert({ org_id: orgId, requester_email: settings.orgProfile.contact_email || '', note: `Technician requested from dashboard${phone ? ` • phone: ${phone}` : ''}`, status: 'pending' });
+      await supabase.from('requests').insert({ org_id: orgId, org_slug: org, requester_email: settings.orgProfile.contact_email || '', note: `Technician requested from dashboard${phone ? ` • phone: ${phone}` : ''}`, status: 'pending' });
+      alert('Technician request sent');
     }
   }
 
