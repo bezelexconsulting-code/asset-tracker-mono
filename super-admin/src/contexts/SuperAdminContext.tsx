@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 
 export interface Organization {
   id: string;
@@ -63,6 +64,7 @@ interface SuperAdminContextValue {
   listOrgs: () => Organization[];
   addOrg: (o: Omit<Organization, 'id'>) => Organization;
   updateOrg: (id: string, patch: Partial<Organization>) => void;
+  deleteOrg: (id: string) => void;
   listRequests: () => TechRequest[];
   addRequest: (r: Omit<TechRequest, 'id' | 'created_at' | 'status'> & { status?: TechRequest['status'] }) => TechRequest;
   updateRequest: (id: string, patch: Partial<TechRequest>) => void;
@@ -76,6 +78,8 @@ interface SuperAdminContextValue {
   setFlag: (org_id: string, key: string, enabled: boolean) => void;
   listUserChanges: () => NonNullable<SuperAdminState['user_changes']>;
   addUserChange: (c: { org_id: string; type: 'admin' | 'technician'; user_id?: string; old_username?: string; new_username: string }) => void;
+  notify?: string | null;
+  clearNotify?: () => void;
 }
 
 const SuperAdminContext = createContext<SuperAdminContextValue | null>(null);
@@ -149,18 +153,40 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
     setState(demo);
   }, []);
   useEffect(() => {
+    if (!SUPABASE_CONFIGURED) return;
+    (async () => {
+      const { data: orgs } = await supabase.from('organizations').select('*').order('created_at', { ascending: false });
+      setState((s)=> ({ ...s, orgs: (orgs||[]).map((o:any)=> ({ id:o.id, org_id:o.slug, name:o.name, contact_email:o.contact_email, active:o.active })) }));
+      const { data: reqs } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
+      setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at })) }));
+      supabase.channel('super-admin-requests')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, (payload:any) => {
+          const r = payload.new;
+          setState((s)=> ({ ...s, requests: [{ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at }, ...s.requests], user_changes: s.user_changes }));
+          setNotify(`New request from ${r.org_id}`);
+        })
+        .subscribe();
+    })();
+  }, []);
+  useEffect(() => {
     localStorage.setItem('bez-superadmin', JSON.stringify(state));
   }, [state]);
 
+  const [notify, setNotify] = useState<string | null>(null);
   const value = useMemo<SuperAdminContextValue>(() => ({
     state,
     listOrgs: () => state.orgs,
     addOrg: (o) => {
+      if (SUPABASE_CONFIGURED) {
+        const created = { id: genId(), ...o } as Organization;
+        return created;
+      }
       const created = { id: genId(), ...o } as Organization;
       setState((s) => ({ ...s, orgs: [created, ...s.orgs] }));
       return created;
     },
     updateOrg: (id, patch) => setState((s) => ({ ...s, orgs: s.orgs.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+    deleteOrg: (id) => setState((s)=> ({ ...s, orgs: s.orgs.filter((x)=> x.id!==id) })),
     listRequests: () => state.requests,
     addRequest: (r) => {
       const created = { id: genId(), created_at: new Date().toISOString(), status: r.status || 'pending', ...r } as TechRequest;
@@ -193,7 +219,9 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
     })),
     listUserChanges: () => state.user_changes || [],
     addUserChange: (c) => setState((s) => ({ ...s, user_changes: [{ id: genId(), created_at: new Date().toISOString(), ...c }, ...(s.user_changes || [])] })),
-  }), [state]);
+    notify,
+    clearNotify: () => setNotify(null),
+  }), [state, notify]);
 
   return <SuperAdminContext.Provider value={value}>{children}</SuperAdminContext.Provider>;
 }

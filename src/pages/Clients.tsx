@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useParams } from 'react-router-dom';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 import { BuildingOfficeIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 interface Client {
@@ -13,6 +15,7 @@ interface Client {
 }
 
 export default function Clients() {
+  const { org } = useParams();
   const { listClients, addClient, updateClient, addLocation, listLocations } = useData() as any;
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,12 +24,35 @@ export default function Clients() {
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [siteForm, setSiteForm] = useState<{ name: string; address: string }>({ name: '', address: '' });
+  async function updateClientLive(id: string, patch: any) {
+    if (SUPABASE_CONFIGURED) {
+      const { error } = await supabase.from('clients').update({
+        name: patch.name ?? undefined,
+        contact_email: patch.email ?? undefined,
+        phone: patch.phone ?? undefined,
+        logo_url: patch.logo_url ?? undefined,
+      }).eq('id', id);
+      if (!error) setClients((prev)=> prev.map((x:any)=> x.id===id ? { ...x, name: patch.name ?? x.name, contact_email: patch.email ?? x.contact_email, phone: patch.phone ?? x.phone, logo_url: patch.logo_url ?? x.logo_url } : x));
+    } else {
+      updateClient(id, patch);
+      setClients((prev)=> prev.map((x:any)=> x.id===id ? { ...x, ...patch } : x));
+    }
+  }
 
   useEffect(() => {
-    setLoading(true);
-    setClients(listClients());
-    setLoading(false);
-  }, [listClients]);
+    (async () => {
+      setLoading(true);
+      if (SUPABASE_CONFIGURED) {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data } = await supabase.from('clients').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
+        setClients((data || []) as any);
+      } else {
+        setClients(listClients());
+      }
+      setLoading(false);
+    })();
+  }, [listClients, org]);
 
   const submit = async () => {
     setError(null);
@@ -34,21 +60,21 @@ export default function Clients() {
       setError('Client name is required');
       return;
     }
-    const created = addClient({
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: form.address,
-      contact_person: form.contact_person,
-      logo_url: form.logo_url,
-    });
-    if (form.site_name) {
-      addLocation({ client_id: created.id, name: form.site_name, address: form.site_address });
+    if (SUPABASE_CONFIGURED) {
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      const { data, error: insErr } = await supabase.from('clients').insert({ org_id: orgId, name: form.name, contact_email: form.email, phone: form.phone, logo_url: form.logo_url }).select('*');
+      if (insErr) { setError(String(insErr.message)); return; }
+      const created = (data || [])[0];
+      setClients([created, ...clients]);
+    } else {
+      const created = addClient({ name: form.name, email: form.email, phone: form.phone, address: form.address, contact_person: form.contact_person, logo_url: form.logo_url });
+      if (form.site_name) { addLocation({ client_id: created.id, name: form.site_name, address: form.site_address }); }
+      setClients([created, ...clients]);
     }
-    setClients([created, ...clients]);
     setShowForm(false);
     setForm({ id: '', name: '', email: '', phone: '', address: '', contact_person: '', logo_url: '', site_name: '', site_address: '' });
-    setEditId(created.id);
+    setEditId(null);
   };
 
   return (
@@ -138,11 +164,14 @@ export default function Clients() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <div>{c.email}</div>
+                  <div>{(c as any).contact_email || c.email}</div>
                   <div className="text-gray-500 text-xs">{c.phone}</div>
                 </td>
                 <td className="px-6 py-4 text-sm"><a className="text-blue-600" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || '')}`} target="_blank" rel="noreferrer">{c.address || 'Open in Maps'}</a></td>
-                <td className="px-6 py-4 text-sm"><button className="px-2 py-1 rounded bg-gray-100" onClick={()=> setEditId(c.id)}>Edit</button></td>
+                <td className="px-6 py-4 text-sm">
+                  <button className="px-2 py-1 rounded bg-gray-100" onClick={()=> setEditId(c.id)}>Edit</button>
+                  {SUPABASE_CONFIGURED && (<button className="ml-2 px-2 py-1 rounded bg-red-600 text-white" onClick={async()=>{ await supabase.from('clients').delete().eq('id', (c as any).id); setClients(clients.filter((x)=> x.id !== c.id)); }}>Delete</button>)}
+                </td>
               </tr>
             ))}
             {clients.length === 0 && (
@@ -166,10 +195,22 @@ export default function Clients() {
                   <button className="text-gray-600" onClick={()=>setEditId(null)}>✕</button>
                 </div>
                 <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Name" defaultValue={c.name} onChange={(e)=> updateClient(c.id, { name: e.target.value })} />
-                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Email" defaultValue={c.email} onChange={(e)=> updateClient(c.id, { email: e.target.value })} />
-                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Phone" defaultValue={c.phone} onChange={(e)=> updateClient(c.id, { phone: e.target.value })} />
+                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Name" defaultValue={c.name} onChange={(e)=> updateClientLive(c.id, { name: e.target.value })} />
+                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Email" defaultValue={(c as any).contact_email || c.email} onChange={(e)=> updateClientLive(c.id, { email: e.target.value })} />
+                  <input className="border border-gray-300 rounded px-3 py-2" placeholder="Phone" defaultValue={c.phone} onChange={(e)=> updateClientLive(c.id, { phone: e.target.value })} />
                   <input className="border border-gray-300 rounded px-3 py-2" placeholder="Address" defaultValue={c.address} onChange={(e)=> updateClient(c.id, { address: e.target.value })} />
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="text-xs text-gray-600">Logo</label>
+                    <input type="file" accept="image/*" className="mt-1 w-full" onChange={async (e)=>{
+                      const f = e.target.files?.[0]; if(!f) return;
+                      const reader = new FileReader();
+                      reader.onload = async ()=> {
+                        const dataUrl = String(reader.result);
+                        await updateClientLive(c.id, { logo_url: dataUrl });
+                      };
+                      reader.readAsDataURL(f);
+                    }} />
+                  </div>
                 </div>
                 <div className="mt-4">
                   <div className="text-sm font-semibold">Sites</div>

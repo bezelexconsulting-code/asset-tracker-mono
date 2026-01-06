@@ -6,6 +6,9 @@ export default function OrgLanding() {
   const [slug, setSlug] = useState('');
   return (
     <div className="max-w-md mx-auto mt-16 bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+      <div className="flex items-center justify-center">
+        <img src="/branding/promoimage.png" alt="App" className="w-48 h-48 object-contain" />
+      </div>
       <div>
         <h1 className="text-2xl font-bold">Welcome</h1>
         <p className="mt-2 text-gray-600">Enter your organization to sign in.</p>

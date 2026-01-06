@@ -75,7 +75,7 @@ export default function AppLayout() {
               {(branding.logo_url || settings.branding.logo_url) ? (
                 <img src={branding.logo_url || settings.branding.logo_url} alt="Logo" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[10px] text-gray-400">Logo</span>
+                <img src="/branding/bez-asset-logo.png" alt="Logo" className="w-full h-full object-cover" />
               )}
             </div>
             <div className="font-semibold" style={{ color: (branding.primary_color || settings.branding.primary_color || '#111827') }}>
@@ -100,9 +100,10 @@ export default function AppLayout() {
     );
   }
 
-  const path = useLocation().pathname.toLowerCase();
-  const isLoginRoute = path.includes('/login');
-  const isTechRoute = path.includes('/tech');
+  const loc = useLocation();
+  const segs = loc.pathname.replace(/^\/+/, '').split('/');
+  const isLoginRoute = segs[1] === 'login';
+  const isTechRoute = segs[1] === 'tech';
   return (
     <SettingsProvider org={org || 'demo-org'}>
       <AuthProvider org={org || 'demo-org'}>
