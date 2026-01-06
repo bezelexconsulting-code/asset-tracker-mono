@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useData } from '../contexts/DataContext';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 
 export default function TechApp() {
   const { org } = useParams();
@@ -25,19 +26,39 @@ export default function TechApp() {
   const [addForm, setAddForm] = useState<{ name: string; asset_tag: string; status: string; image_url?: string; category_id?: string }>({ name: '', asset_tag: '', status: 'available', image_url: '', category_id: '' });
 
   useEffect(() => {
-    let techs = listTechnicians();
-    if (!techs || techs.length === 0) {
-      // In production, do not auto-create demo technicians
-      return;
-    }
-    const t = qpTech ? techs.find((x) => x.id === qpTech) : techs[0];
-    if (t) {
-      setTechId(t.id);
-      setTechEmail(t.email || t.username || '');
-      if (!user || user.role !== 'technician') {
-        login({ id: `tech_${Date.now()}`, email: t.email || t.username || '', role: 'technician', name: t.name, technician_id: t.id });
+    (async ()=>{
+      if (SUPABASE_CONFIGURED) {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data: techs } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name');
+        const t = qpTech ? (techs||[]).find((x:any) => x.id === qpTech) : (techs||[])[0];
+        if (t) {
+          setTechId(t.id);
+          setTechEmail(t.email || t.username || '');
+          if (!user || user.role !== 'technician') {
+            login({ id: `tech_${Date.now()}`, email: t.email || t.username || '', role: 'technician', name: t.full_name || t.username || 'Technician', technician_id: t.id });
+          }
+        }
+        supabase.channel(`techapp_${orgId}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, async ()=>{
+            const { data: techs } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name');
+            const current = (techs||[]).find((x:any)=> x.id===techId) || (techs||[])[0];
+            if (current) setTechEmail(current.email || current.username || '');
+          })
+          .subscribe();
+      } else {
+        let techs = listTechnicians();
+        if (!techs || techs.length === 0) return;
+        const t = qpTech ? techs.find((x) => x.id === qpTech) : techs[0];
+        if (t) {
+          setTechId(t.id);
+          setTechEmail(t.email || t.username || '');
+          if (!user || user.role !== 'technician') {
+            login({ id: `tech_${Date.now()}`, email: t.email || t.username || '', role: 'technician', name: t.name, technician_id: t.id });
+          }
+        }
       }
-    }
+    })();
   }, [qpTech, listTechnicians]);
 
   const activities = useMemo(() => listActivities().filter((a) => a.technician_id === (techId || qpTech)), [listActivities, techId, qpTech]);

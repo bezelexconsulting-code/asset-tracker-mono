@@ -176,5 +176,33 @@ export default function Dashboard() {
       const { data: tx } = await supabase.from('transactions_v2').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
     })();
+    const ch = supabase.channel(`dashboard_${org}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets_unified' }, async ()=>{
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { count: assetsCount } = await supabase.from('assets_unified').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        const { count: checkedCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
+        setCounts((c)=> ({ ...c, assets: assetsCount || 0, checked: checkedCount || 0 }));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        setCounts((c)=> ({ ...c, techs: techsCount || 0 }));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        setCounts((c)=> ({ ...c, clients: clientsCount || 0 }));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions_v2' }, async ()=>{
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        const { data: tx } = await supabase.from('transactions_v2').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
+        setRecent(tx || []);
+      })
+      .subscribe();
+    return () => { try { supabase.removeChannel(ch); } catch {} };
   }, [org]);
 }

@@ -31,6 +31,12 @@ export default function Technicians() {
         const orgId = orgRow?.[0]?.id;
         const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
         setTechs((data||[]) as any);
+        supabase.channel(`techs_${orgId}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, async ()=>{
+            const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
+            setTechs((data||[]) as any);
+          })
+          .subscribe();
       } else {
         setTechs(listTechnicians());
       }

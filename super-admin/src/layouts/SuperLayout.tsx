@@ -7,6 +7,7 @@ export default function SuperLayout() {
     { to: '/super/dashboard', label: 'Dashboard' },
     { to: '/super/orgs', label: 'Organizations' },
     { to: '/super/requests', label: 'Requests' },
+    { to: '/super/techs', label: 'Technicians' },
     { to: '/super/billing', label: 'Billing' },
     { to: '/super/tickets', label: 'Tickets' },
     { to: '/super/flags', label: 'Flags' },
