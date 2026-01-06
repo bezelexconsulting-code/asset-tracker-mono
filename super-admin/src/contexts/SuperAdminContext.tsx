@@ -159,13 +159,19 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       setState((s)=> ({ ...s, orgs: (orgs||[]).map((o:any)=> ({ id:o.id, org_id:o.slug, name:o.name, contact_email:o.contact_email, active:o.active })) }));
       const { data: reqs } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
       setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at })) }));
-      supabase.channel('super-admin-requests')
+      const channel = supabase.channel('super-admin-requests')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, (payload:any) => {
           const r = payload.new;
           setState((s)=> ({ ...s, requests: [{ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at }, ...s.requests], user_changes: s.user_changes }));
           setNotify(`New request from ${r.org_id}`);
+          // Fire email notification via serverless API
+          const to = process.env.VITE_SUPERADMIN_EMAIL || '';
+          if (to) {
+            fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, subject: `New Technician Request — ${r.org_id}`, html: `<p>New request from <b>${r.org_id}</b></p><p>Requester: ${r.requester_email||''}</p><p>Note: ${r.note||''}</p><p>Time: ${new Date(r.created_at).toLocaleString()}</p>` }) }).catch(()=>{});
+          }
         })
         .subscribe();
+      return () => { try { supabase.removeChannel(channel); } catch {} };
     })();
   }, []);
   useEffect(() => {
