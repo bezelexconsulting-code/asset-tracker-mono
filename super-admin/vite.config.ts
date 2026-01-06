@@ -1,26 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      manifest: {
-        name: 'Bez Super Admin',
-        short_name: 'BezAdmin',
-        start_url: '/super/login',
-        scope: '/',
-        display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#0ea5e9',
-        icons: [
-          { src: '/branding/bez-asset-logo.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/branding/bez-asset-logo.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-      }
-    })
-  ],
+  plugins: [react()],
   server: { port: 5183 }
 });
