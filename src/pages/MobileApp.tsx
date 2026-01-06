@@ -325,9 +325,6 @@ export default function MobileApp() {
                   <div className="text-xs mt-1">Tap Tag</div>
                 </button>
               </div>
-              <div className="mt-3">
-                <button className="px-3 py-2 rounded bg-gray-900 text-white text-xs" onClick={loadDemo}>Load Demo Pack</button>
-              </div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <div className="text-sm font-semibold">Recent Activity</div>
