@@ -62,10 +62,13 @@ export default function Login() {
         const passOk = hp ? bcrypt.compareSync(password, hp) : password === p;
         if (!password || !passOk || (email !== orgRec.contact_email && email !== u)) { setError('Invalid credentials'); return; }
         if (orgRec.client_force_reset) { navigate(`/${org}/reset-password?user=client`); return; }
+        login({ id: `admin_${Date.now()}`, email, role: 'admin', name: settings.orgProfile.name });
+        navigate(`/${org}/dashboard`);
+        return;
+      } else {
+        setError('Supabase not configured for secure login');
+        return;
       }
-      login({ id: `admin_${Date.now()}`, email, role: 'admin', name: settings.orgProfile.name });
-      navigate(`/${org}/dashboard`);
-      return;
     }
     const params = new URLSearchParams(window.location.search);
     const techId = params.get('tech');
@@ -80,13 +83,13 @@ export default function Login() {
     let t = techId ? techs.find((x) => x.id === techId) : null;
     if (!t) t = techs.find((x:any) => x.email === email || x.username === email) || null;
     const passOk = t ? ((t.hashed_password ? bcrypt.compareSync(password, t.hashed_password) : (t.password && password === t.password))) : false;
-    if (t && !passOk) { setError('Invalid credentials'); return; }
+    if (!t || !passOk) { setError('Invalid credentials'); return; }
     if (t && (t as any).must_reset_password) {
       navigate(`/${org}/reset-password?user=tech&tech=${t.id}`);
       return;
     }
-    login({ id: `tech_${Date.now()}`, email, role: 'technician', name: t?.name || 'Technician', technician_id: (techId || t?.id) || undefined });
-    navigate(`/${org}/technicians/${techId || 't1'}`);
+    login({ id: `tech_${Date.now()}`, email, role: 'technician', name: t?.name || 'Technician', technician_id: t?.id });
+    navigate(`/${org}/technicians/${t?.id}`);
   };
 
   return (
