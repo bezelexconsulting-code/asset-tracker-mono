@@ -23,13 +23,13 @@ import RequireAdmin from './components/RequireAdmin';
 import EmailPreview from './pages/EmailPreview';
 import Account from './pages/Account';
 import ResetPassword from './pages/ResetPassword';
+import OrgLanding from './pages/OrgLanding';
 
 export default function App() {
-  const defaultOrg = import.meta.env.VITE_DEFAULT_ORG_SLUG || 'demo-org';
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        <Route path="/" element={<Navigate to={`/${defaultOrg}/login`} replace />} />
+        <Route path="/" element={<OrgLanding />} />
         <Route path="/:org" element={<AppLayout />}>
           
           <Route path="login" element={<Login />} />
@@ -59,7 +59,7 @@ export default function App() {
           <Route path="mobile" element={<MobileApp />} />
         </Route>
         {/* Super admin routes removed in production; managed by separate app */}
-        <Route path="*" element={<Navigate to={`/${defaultOrg}/login`} replace />} />
+        <Route path="*" element={<OrgLanding />} />
       </Routes>
     </div>
   );

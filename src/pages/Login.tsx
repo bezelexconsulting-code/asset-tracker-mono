@@ -4,21 +4,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
-// Force-clear old PWA caches and service workers on the login route to avoid stale UI
-useEffect(() => {
-  (async () => {
-    try {
-      if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const r of regs) await r.unregister();
-      }
-      if (window.caches) {
-        const keys = await caches.keys();
-        for (const k of keys) await caches.delete(k);
-      }
-    } catch {}
-  })();
-}, []);
 import bcrypt from 'bcryptjs';
 
 export default function Login() {
@@ -32,6 +17,21 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'technician'>('admin');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) await r.unregister();
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          for (const k of keys) await caches.delete(k);
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
