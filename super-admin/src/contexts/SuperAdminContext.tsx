@@ -221,7 +221,33 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       setState((s) => ({ ...s, requests: [created, ...s.requests] }));
       return created;
     },
-    updateRequest: (id, patch) => setState((s) => ({ ...s, requests: s.requests.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+    updateRequest: (id, patch) => {
+      if (SUPABASE_CONFIGURED) {
+        (async()=>{
+          await supabase.from('requests').update(patch).eq('id', id);
+          if (patch.status === 'approved') {
+            try {
+              const { data: reqs } = await supabase.from('requests').select('*').eq('id', id).limit(1);
+              const req = reqs?.[0];
+              const { data: orgs } = await supabase.from('organizations').select('id, name, slug, contact_email').eq('id', req.org_id).limit(1);
+              const org = orgs?.[0] || {};
+              const to = org.contact_email || '';
+              if (to) {
+                const html = `
+                  <h2 style="margin:0 0 8px">Technician Request Approved</h2>
+                  <p style="margin:4px 0">Your request for a technician has been <b>approved</b>.</p>
+                  <p style="margin:4px 0"><b>Organization:</b> ${org.name || ''} (${org.slug || ''})</p>
+                  <p style="margin:8px 0">We will contact you shortly to finalize scheduling.</p>
+                  <p style="margin:8px 0">If you need to add details, reply to this email.</p>
+                `;
+                fetch('/api/send-email', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ to, subject: `Technician Request Approved — ${org.slug || ''}`, html }) }).catch(()=>{});
+              }
+            } catch {}
+          }
+        })();
+      }
+      setState((s) => ({ ...s, requests: s.requests.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
+    },
     listInvoices: () => state.invoices,
     addInvoice: (i) => {
       const created = { id: genId(), created_at: new Date().toISOString(), status: i.status || 'open', ...i } as Invoice;
