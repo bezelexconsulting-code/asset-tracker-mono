@@ -25,14 +25,12 @@ export default function Dashboard() {
   } catch {}
   const formatR = (cents: number) => `R ${(cents / 100).toFixed(2)}`;
   const vatRate = 0.15;
-  function makeTechRequest() {
-    try {
-      const raw = localStorage.getItem('bez-superadmin');
-      const data = raw ? JSON.parse(raw) : { orgs: [], requests: [] };
-      const req = { id: `id_${Date.now()}`, org_id: org, requester_email: settings.orgProfile.contact_email || '', note: 'Technician requested from dashboard', status: 'pending', created_at: new Date().toISOString() };
-      data.requests = [req, ...(data.requests || [])];
-      localStorage.setItem('bez-superadmin', JSON.stringify(data));
-    } catch {}
+  async function makeTechRequest() {
+    if (SUPABASE_CONFIGURED) {
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      await supabase.from('requests').insert({ org_id: orgId, requester_email: settings.orgProfile.contact_email || '', note: 'Technician requested from dashboard', status: 'pending' });
+    }
   }
 
   return (

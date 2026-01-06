@@ -45,6 +45,21 @@ export default function SuperOrgs() {
                       </button>
                       <button className="px-2 py-1 rounded bg-blue-600 text-white" onClick={async()=>{ await supabase.from('organizations').update({ client_username: username||o.client_username, client_password: password||o.client_password, client_force_reset: true }).eq('id', o.id); load(); }}>Set Client Login</button>
                       <button className="px-2 py-1 rounded bg-red-600 text-white" onClick={async()=>{ await supabase.from('organizations').delete().eq('id', o.id); load(); }}>Delete</button>
+                      <details>
+                        <summary className="cursor-pointer text-xs text-gray-600">Add Technician</summary>
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input placeholder="Full name" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_name_${o.id}`} />
+                          <input placeholder="Email" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_email_${o.id}`} />
+                          <input placeholder="Username" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_user_${o.id}`} />
+                        </div>
+                        <button className="mt-2 px-2 py-1 rounded bg-blue-600 text-white text-xs" onClick={async()=>{
+                          const name = (document.getElementById(`orgtech_name_${o.id}`) as HTMLInputElement).value;
+                          const email = (document.getElementById(`orgtech_email_${o.id}`) as HTMLInputElement).value;
+                          const username = (document.getElementById(`orgtech_user_${o.id}`) as HTMLInputElement).value;
+                          if(!name) return;
+                          await supabase.from('technicians').insert({ org_id: o.id, full_name: name, email, username, is_active: true });
+                        }}>Save Technician</button>
+                      </details>
                     </div>
                   ) : (
                     <button className="px-2 py-1 rounded bg-gray-100" onClick={()=> updateOrg(o.id, { active: !o.active })}>{o.active ? 'Deactivate' : 'Activate'}</button>

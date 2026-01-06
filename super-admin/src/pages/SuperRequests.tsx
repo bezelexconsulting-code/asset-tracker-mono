@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 
 export default function SuperRequests() {
   const { state, addRequest, updateRequest } = useSuperAdmin();
@@ -31,6 +32,24 @@ export default function SuperRequests() {
                 <td className="px-4 py-2 text-sm">
                   <button className="px-2 py-1 rounded bg-blue-100" onClick={()=> updateRequest(r.id, { status: 'approved' })}>Approve</button>
                   <button className="ml-2 px-2 py-1 rounded bg-red-100" onClick={()=> updateRequest(r.id, { status: 'rejected' })}>Reject</button>
+                  {SUPABASE_CONFIGURED && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-gray-600">Add Technician</summary>
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input placeholder="Full name" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`name_${r.id}`} />
+                        <input placeholder="Email" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`email_${r.id}`} />
+                        <input placeholder="Username" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`user_${r.id}`} />
+                      </div>
+                      <button className="mt-2 px-2 py-1 rounded bg-blue-600 text-white text-xs" onClick={async()=>{
+                        const name = (document.getElementById(`name_${r.id}`) as HTMLInputElement).value;
+                        const email = (document.getElementById(`email_${r.id}`) as HTMLInputElement).value;
+                        const username = (document.getElementById(`user_${r.id}`) as HTMLInputElement).value;
+                        if(!name) return;
+                        await supabase.from('technicians').insert({ org_id: r.org_id, full_name: name, email, username, is_active: true });
+                        updateRequest(r.id, { status: 'approved' });
+                      }}>Save Technician</button>
+                    </details>
+                  )}
                 </td>
               </tr>
             ))}

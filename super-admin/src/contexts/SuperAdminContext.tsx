@@ -189,6 +189,14 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
     deleteOrg: (id) => setState((s)=> ({ ...s, orgs: s.orgs.filter((x)=> x.id!==id) })),
     listRequests: () => state.requests,
     addRequest: (r) => {
+      if (SUPABASE_CONFIGURED) {
+        (async()=>{
+          await supabase.from('requests').insert({ org_id: r.org_id, requester_email: r.requester_email, note: r.note, status: r.status || 'pending' });
+        })();
+        const created = { id: genId(), created_at: new Date().toISOString(), status: r.status || 'pending', ...r } as TechRequest;
+        setState((s) => ({ ...s, requests: [created, ...s.requests] }));
+        return created;
+      }
       const created = { id: genId(), created_at: new Date().toISOString(), status: r.status || 'pending', ...r } as TechRequest;
       setState((s) => ({ ...s, requests: [created, ...s.requests] }));
       return created;
