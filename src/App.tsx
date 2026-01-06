@@ -25,9 +25,11 @@ import Account from './pages/Account';
 import ResetPassword from './pages/ResetPassword';
 
 export default function App() {
+  const defaultOrg = import.meta.env.VITE_DEFAULT_ORG_SLUG || 'demo-org';
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
+        <Route path="/" element={<Navigate to={`/${defaultOrg}/login`} replace />} />
         <Route path="/:org" element={<AppLayout />}>
           
           <Route path="login" element={<Login />} />
@@ -57,19 +59,7 @@ export default function App() {
           <Route path="mobile" element={<MobileApp />} />
         </Route>
         {/* Super admin routes removed in production; managed by separate app */}
-        <Route
-          path="*"
-          element={
-            <div className="max-w-3xl mx-auto p-8">
-              <h1 className="text-2xl font-bold">Asset Tracker</h1>
-              <p className="mt-2 text-gray-600">Choose an organization route.</p>
-              <div className="mt-6 space-x-3">
-                <Link to="/demo-org/dashboard" className="px-4 py-2 rounded-md bg-blue-600 text-white">Open Dashboard</Link>
-                <Link to="/demo-org/nfc" className="px-4 py-2 rounded-md bg-slate-700 text-white">Open NFC</Link>
-              </div>
-            </div>
-          }
-        />
+        <Route path="*" element={<Navigate to={`/${defaultOrg}/login`} replace />} />
       </Routes>
     </div>
   );
