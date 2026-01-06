@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,21 @@ export default function SuperLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) await r.unregister();
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          for (const k of keys) await caches.delete(k);
+        }
+      } catch {}
+    })();
+  }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
