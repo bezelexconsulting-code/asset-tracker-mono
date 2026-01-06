@@ -160,15 +160,29 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       const { data: reqs } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
       setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at })) }));
       const channel = supabase.channel('super-admin-requests')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, (payload:any) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, async (payload:any) => {
           const r = payload.new;
           setState((s)=> ({ ...s, requests: [{ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at }, ...s.requests], user_changes: s.user_changes }));
-          setNotify(`New request from ${r.org_id}`);
-          // Fire email notification via serverless API
-          const to = process.env.VITE_SUPERADMIN_EMAIL || '';
-          if (to) {
-            fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, subject: `New Technician Request — ${r.org_id}`, html: `<p>New request from <b>${r.org_id}</b></p><p>Requester: ${r.requester_email||''}</p><p>Note: ${r.note||''}</p><p>Time: ${new Date(r.created_at).toLocaleString()}</p>` }) }).catch(()=>{});
-          }
+          setNotify(`New request received`);
+          try {
+            const { data: orgs } = await supabase.from('organizations').select('id, name, slug, contact_email, contact_phone').eq('id', r.org_id).limit(1);
+            const org = orgs?.[0] || {};
+            const to = process.env.VITE_SUPERADMIN_EMAIL || '';
+            const portal = (typeof window !== 'undefined' ? window.location.origin : '') + '/super/requests';
+            if (to) {
+              const html = `
+                <h2 style="margin:0 0 8px">New Technician Request</h2>
+                <p style="margin:4px 0"><b>Organization:</b> ${org.name || ''} (${org.slug || ''})</p>
+                <p style="margin:4px 0"><b>Requester:</b> ${r.requester_email || ''}</p>
+                <p style="margin:4px 0"><b>Contact Email:</b> ${org.contact_email || ''}</p>
+                <p style="margin:4px 0"><b>Contact Phone:</b> ${org.contact_phone || ''}</p>
+                <p style="margin:8px 0"><b>Note:</b> ${r.note || ''}</p>
+                <p style="margin:8px 0"><b>Time:</b> ${new Date(r.created_at).toLocaleString()}</p>
+                <p style="margin:8px 0"><a href="${portal}" target="_blank">Open Requests in Super Admin</a></p>
+              `;
+              fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, subject: `New Technician Request — ${org.slug || 'organization'}`, html }) }).catch(()=>{});
+            }
+          } catch {}
         })
         .subscribe();
       return () => { try { supabase.removeChannel(channel); } catch {} };
