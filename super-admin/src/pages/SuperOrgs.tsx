@@ -3,6 +3,23 @@ import { useSuperAdmin } from '../contexts/SuperAdminContext';
 import React from 'react';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 
+function AddTechInline({ orgId, onSaved }: { orgId: string; onSaved?: ()=>void }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  if (!SUPABASE_CONFIGURED) return null as any;
+  return (
+    <div className="mt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <input placeholder="Full name" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={name} onChange={(e)=> setName(e.target.value)} />
+        <input placeholder="Email" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={email} onChange={(e)=> setEmail(e.target.value)} />
+        <input placeholder="Username" className="border border-gray-300 rounded px-2 py-2 text-sm w-full" value={username} onChange={(e)=> setUsername(e.target.value)} />
+      </div>
+      <button className="mt-2 px-3 py-2 rounded bg-blue-600 text-white text-sm" onClick={async()=>{ if(!name) return; await supabase.from('technicians').insert({ org_id: orgId, full_name: name, email, username, is_active: true }); if(onSaved) onSaved(); setName(''); setEmail(''); setUsername(''); }}>Save Technician</button>
+    </div>
+  );
+}
+
 export default function SuperOrgs() {
   const { state, addOrg, updateOrg } = useSuperAdmin();
   const [name, setName] = useState('');
@@ -47,18 +64,7 @@ export default function SuperOrgs() {
                       <button className="px-2 py-1 rounded bg-red-600 text-white" onClick={async()=>{ await supabase.from('organizations').delete().eq('id', o.id); load(); }}>Delete</button>
                       <details>
                         <summary className="cursor-pointer text-xs text-gray-600">Add Technician</summary>
-                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input placeholder="Full name" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_name_${o.id}`} />
-                          <input placeholder="Email" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_email_${o.id}`} />
-                          <input placeholder="Username" className="border border-gray-300 rounded px-2 py-1 text-xs" id={`orgtech_user_${o.id}`} />
-                        </div>
-                        <button className="mt-2 px-2 py-1 rounded bg-blue-600 text-white text-xs" onClick={async()=>{
-                          const name = (document.getElementById(`orgtech_name_${o.id}`) as HTMLInputElement).value;
-                          const email = (document.getElementById(`orgtech_email_${o.id}`) as HTMLInputElement).value;
-                          const username = (document.getElementById(`orgtech_user_${o.id}`) as HTMLInputElement).value;
-                          if(!name) return;
-                          await supabase.from('technicians').insert({ org_id: o.id, full_name: name, email, username, is_active: true });
-                        }}>Save Technician</button>
+                        <AddTechInline orgId={o.id} />
                       </details>
                     </div>
                   ) : (
