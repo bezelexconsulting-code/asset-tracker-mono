@@ -27,7 +27,7 @@ export function AuthProvider({ org, children }: { org: string; children: React.R
   const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem(key(org));
+    const raw = localStorage.getItem(key(org)) || sessionStorage.getItem(key(org));
     if (raw) {
       try {
         setUser(JSON.parse(raw));
@@ -40,8 +40,14 @@ export function AuthProvider({ org, children }: { org: string; children: React.R
   }, [org]);
 
   useEffect(() => {
-    if (user) localStorage.setItem(key(org), JSON.stringify(user));
-    else localStorage.removeItem(key(org));
+    if (user) {
+      const s = JSON.stringify(user);
+      localStorage.setItem(key(org), s);
+      sessionStorage.setItem(key(org), s);
+    } else {
+      localStorage.removeItem(key(org));
+      sessionStorage.removeItem(key(org));
+    }
   }, [org, user]);
 
   const value = useMemo<AuthContextValue>(() => ({
