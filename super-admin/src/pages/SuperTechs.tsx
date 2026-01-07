@@ -58,12 +58,16 @@ export default function SuperTechs() {
       {error && (<div className="p-3 border border-red-200 bg-red-50 rounded text-sm text-red-800">{error}</div>)}
       <div className="bg-white border border-gray-200 rounded">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Technician</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3"></th></tr></thead>
+          <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Technician</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Specialization</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3"></th></tr></thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {rows.map(r=> (
               <tr key={r.id}>
-                <td className="px-6 py-4 text-sm">{r.full_name}</td>
-                <td className="px-6 py-4 text-sm">{r.email||'—'}</td>
+                <td className="px-6 py-4 text-sm">
+                  <div className="font-medium text-gray-900">{r.full_name}</div>
+                  <div className="text-gray-500 text-xs">{r.email||'No email'}</div>
+                </td>
+                <td className="px-6 py-4 text-sm">{r.username||'—'}</td>
+                <td className="px-6 py-4 text-sm">{r.specialization||'—'}</td>
                 <td className="px-6 py-4 text-sm">{r.is_active ? 'Active' : 'Inactive'}</td>
                 <td className="px-6 py-4 text-sm">
                   <div className="flex items-center space-x-2">
