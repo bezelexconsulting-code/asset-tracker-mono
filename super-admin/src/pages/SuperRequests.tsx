@@ -53,10 +53,7 @@ export default function SuperRequests() {
                   <button className="px-2 py-1 rounded bg-blue-100" onClick={()=> updateRequest(r.id, { status: 'approved' })}>Approve</button>
                   <button className="ml-2 px-2 py-1 rounded bg-red-100" onClick={()=> updateRequest(r.id, { status: 'rejected' })}>Reject</button>
                   {SUPABASE_CONFIGURED && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-gray-600">Add Technician</summary>
-                      <AddTechInline orgId={r.org_id} onSaved={()=> updateRequest(r.id, { status: 'approved' })} />
-                    </details>
+                    <a href={`/super/techs?org_id=${r.org_id}&org_slug=${(r as any).org_slug || ''}`} className="ml-2 px-2 py-1 rounded bg-blue-600 text-white text-xs">Add Technician</a>
                   )}
                 </td>
               </tr>

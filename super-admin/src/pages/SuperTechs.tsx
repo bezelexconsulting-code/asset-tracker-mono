@@ -10,8 +10,23 @@ export default function SuperTechs() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(()=>{ (async()=>{ if (!SUPABASE_CONFIGURED) return; const { data } = await supabase.from('organizations').select('id,name,slug').order('name'); setOrgs(data||[]); })(); }, []);
+  useEffect(()=>{ 
+    if (!SUPABASE_CONFIGURED) return;
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const qOrgId = params.get('org_id');
+    const qOrgSlug = params.get('org_slug');
+    (async()=>{
+      if (qOrgId) { setOrgId(qOrgId); return; }
+      if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) setOrgId(id); }
+    })();
+  }, []);
   async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name'); setRows(data||[]); }
   useEffect(()=>{ load(); }, [orgId]);
+  useEffect(()=>{ 
+    if (!SUPABASE_CONFIGURED || !orgId) return;
+    const ch = supabase.channel(`super_techs_${orgId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, ()=> load()).subscribe();
+    return ()=> { try { supabase.removeChannel(ch); } catch {} };
+  }, [orgId]);
 
   async function addTech() {
     setError(null);

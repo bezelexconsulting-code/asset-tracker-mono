@@ -64,10 +64,7 @@ export default function SuperOrgs() {
                       </button>
                       <button className="px-2 py-1 rounded bg-blue-600 text-white" onClick={async()=>{ await supabase.from('organizations').update({ client_username: username||o.client_username, client_password: password||o.client_password, client_force_reset: true }).eq('id', o.id); load(); }}>Set Client Login</button>
                       <button className="px-2 py-1 rounded bg-red-600 text-white" onClick={async()=>{ await supabase.from('organizations').delete().eq('id', o.id); load(); }}>Delete</button>
-                      <details>
-                        <summary className="cursor-pointer text-xs text-gray-600">Add Technician</summary>
-                        <AddTechInline orgId={o.id} />
-                      </details>
+                      <a href={`/super/techs?org_id=${o.id}&org_slug=${o.slug || ''}`} className="px-2 py-1 rounded bg-blue-600 text-white text-xs">Add Technician</a>
                     </div>
                   ) : (
                     <button className="px-2 py-1 rounded bg-gray-100" onClick={()=> updateOrg(o.id, { active: !o.active })}>{o.active ? 'Deactivate' : 'Activate'}</button>
