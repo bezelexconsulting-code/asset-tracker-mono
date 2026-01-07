@@ -31,11 +31,11 @@ export default function Technicians() {
       if (SUPABASE_CONFIGURED) {
         const orgId = await resolveOrgId(org);
         if (!orgId) { setError('Organization not found'); setTechs([]); setLoading(false); return; }
-        const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
+        const { data } = await supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status').eq('org_id', orgId).order('full_name');
         setTechs((data||[]) as any);
         const ch = supabase.channel(`techs_${orgId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, async ()=>{
-            const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
+            const { data } = await supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status').eq('org_id', orgId).order('full_name');
             setTechs((data||[]) as any);
           })
           .subscribe();
