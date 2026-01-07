@@ -69,11 +69,7 @@ export const TechnicianManagement: React.FC = () => {
       if (!orgId) { setTechnicians([]); setLoading(false); return; }
       const { data, error } = await supabase
         .from('technicians')
-        .select(`
-          *,
-          work_order_count:work_orders(count),
-          client_count:work_orders(client_id, distinct)
-        `)
+        .select('*')
         .eq('org_id', orgId)
         .order('created_at', { ascending: false });
 
