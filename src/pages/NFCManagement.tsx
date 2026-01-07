@@ -38,20 +38,21 @@ const NFCManagement: React.FC = () => {
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
-    fetchAssets();
-    fetchNFCTags();
+    (async ()=>{
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      await fetchAssets(orgId);
+      await fetchNFCTags(orgId);
+    })();
   }, [org]);
 
-  const fetchAssets = async () => {
+  const fetchAssets = async (orgId?: string) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('assets')
-        .select(`
-          *,
-          nfc_tags!inner(id)
-        `)
-        .eq('org_id', org);
+        .from('assets_v2')
+        .select('*')
+        .eq('org_id', orgId);
 
       if (error) throw error;
       setAssets(data || []);
@@ -62,16 +63,12 @@ const NFCManagement: React.FC = () => {
     }
   };
 
-  const fetchNFCTags = async () => {
+  const fetchNFCTags = async (orgId?: string) => {
     try {
       const { data, error } = await supabase
         .from('nfc_tags')
-        .select(`
-          *,
-          asset:assets(id, asset_tag, name),
-          programmed_by:users(id, full_name)
-        `)
-        .eq('org_id', org)
+        .select('*')
+        .eq('org_id', orgId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

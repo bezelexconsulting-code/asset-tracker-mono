@@ -9,7 +9,6 @@ export default function TechDownload() {
   const links = settings.billing.app_links || {};
   const link = links.web_url || (typeof window !== 'undefined' ? window.location.origin : '');
   const appLink = `${link.replace(/\/$/, '')}/${org}/tech/app`;
-  const mobileLink = `${link.replace(/\/$/, '')}/${org}/tech/mobile`;
   const [qrData, setQrData] = useState<string>('');
   const techParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tech') : '';
   useEffect(() => {
@@ -30,13 +29,9 @@ export default function TechDownload() {
         </div>
         <p className="mt-2 text-gray-600">Choose the interface that fits your workflow. The Mobile App includes the full feature set.</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <a href={`${appLink}${techParam ? `?tech=${techParam}` : ''}`} target="_blank" rel="noreferrer" className="bg-white border border-gray-200 rounded p-4">
-          <div className="font-semibold">Open Technician App</div>
-          <div className="text-sm text-gray-600">Tabs: Scan, Assets, History</div>
-        </a>
-        <a href={`${mobileLink}${techParam ? `?tech=${techParam}` : ''}`} target="_blank" rel="noreferrer" className="bg-white border border-gray-200 rounded p-4">
-          <div className="font-semibold">Open Mobile App (Full Features)</div>
+          <div className="font-semibold">Open App (Full Features)</div>
           <div className="text-sm text-gray-600">Dashboard, Clients, Assets, Jobs, NFC, Reports</div>
         </a>
       </div>
@@ -54,6 +49,11 @@ export default function TechDownload() {
       <div className="bg-white border border-gray-200 rounded p-4">
         <h2 className="text-lg font-semibold">Install as App</h2>
         <p className="text-sm text-gray-600 mt-1">Add to Home Screen from your browser menu to install the web app on mobile. On desktop, bookmark or pin the site for quick access.</p>
+      </div>
+      <div className="bg-white border border-gray-200 rounded p-4">
+        <h2 className="text-lg font-semibold">Login</h2>
+        <p className="text-sm text-gray-600 mt-1">Use your organization login to access features.</p>
+        <a href={`/${org}/login`} className="inline-block mt-2 px-3 py-2 rounded bg-blue-600 text-white">Open Login</a>
       </div>
     </div>
   );

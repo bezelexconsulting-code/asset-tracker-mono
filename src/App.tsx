@@ -9,7 +9,6 @@ import Technicians from './pages/Technicians';
 import TechnicianDetails from './pages/TechnicianDetails';
 import Locations from './pages/Locations';
 import TechDownload from './pages/TechDownload';
-import TechApp from './pages/TechApp';
 import MobileApp from './pages/MobileApp';
 import TechLayout from './layouts/TechLayout';
 import CheckInOut from './pages/CheckInOut';
@@ -53,10 +52,9 @@ export default function App() {
             <Route path="account" element={<Account />} />
           </Route>
         </Route>
-        <Route path="/:org/tech" element={<TechLayout />}>
+        <Route path=":org/tech" element={<TechLayout />}>
           <Route index element={<TechDownload />} />
-          <Route path="app" element={<TechApp />} />
-          <Route path="mobile" element={<MobileApp />} />
+          <Route path="app" element={<MobileApp />} />
         </Route>
         {/* Super admin routes removed in production; managed by separate app */}
         <Route path="*" element={<OrgLanding />} />

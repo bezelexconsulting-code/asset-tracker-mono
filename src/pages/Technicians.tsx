@@ -18,6 +18,7 @@ export default function Technicians() {
   const { listTechnicians, state, listClients, addJob, listAssets, listLocations, addAsset } = useData() as any;
   const [techs, setTechs] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const clients = listClients();
   const [jobForTech, setJobForTech] = useState<string | null>(null);
   const [jobForm, setJobForm] = useState<{ title:string; client_id:string; location_id:string; asset_ids:string[]; notes:string; description:string }>({ title:'', client_id:'', location_id:'', asset_ids:[], notes:'', description:'' });
@@ -29,6 +30,7 @@ export default function Technicians() {
       if (SUPABASE_CONFIGURED) {
         const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
         const orgId = orgRow?.[0]?.id;
+        if (!orgId) { setError('Organization not found'); setTechs([]); setLoading(false); return; }
         const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
         setTechs((data||[]) as any);
         supabase.channel(`techs_${orgId}`)
@@ -53,6 +55,7 @@ export default function Technicians() {
       {/* Demo banner removed in production */}
       <div className="text-sm text-gray-600">Assign jobs to technicians directly from this list.</div>
       <div className="bg-white border border-gray-200 rounded">
+        {error && (<div className="p-3 border border-red-200 bg-red-50 rounded text-sm text-red-800">{error}</div>)}
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
