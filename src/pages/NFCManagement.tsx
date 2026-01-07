@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 import NFCScanner from '../components/NFCScanner';
 import NFCTagProgrammer from '../components/NFCTagProgrammer';
 import { QrCodeIcon, TagIcon, TableCellsIcon } from '@heroicons/react/24/outline';
@@ -39,10 +40,9 @@ const NFCManagement: React.FC = () => {
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     (async ()=>{
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
-      await fetchAssets(orgId);
-      await fetchNFCTags(orgId);
+      const orgId = await resolveOrgId(org);
+      await fetchAssets(orgId || undefined);
+      await fetchNFCTags(orgId || undefined);
     })();
   }, [org]);
 

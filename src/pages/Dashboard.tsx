@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 import { useSettings } from '../contexts/SettingsContext';
 import { useData } from '../contexts/DataContext';
 import { downloadPDF } from '../lib/pdf';
@@ -166,8 +167,7 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     (async () => {
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
+      const orgId = await resolveOrgId(org);
       if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
       const { count: assetsCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       const { count: checkedCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
@@ -179,30 +179,26 @@ export default function Dashboard() {
     })();
     const ch = supabase.channel(`dashboard_${org}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets_v2' }, async ()=>{
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
+        const orgId = await resolveOrgId(org);
         if (!orgId) return;
         const { count: assetsCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
         const { count: checkedCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
         setCounts((c)=> ({ ...c, assets: assetsCount || 0, checked: checkedCount || 0 }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
+        const orgId = await resolveOrgId(org);
         if (!orgId) return;
         const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
         setCounts((c)=> ({ ...c, techs: techsCount || 0 }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
+        const orgId = await resolveOrgId(org);
         if (!orgId) return;
         const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
         setCounts((c)=> ({ ...c, clients: clientsCount || 0 }));
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions_v2' }, async ()=>{
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
+        const orgId = await resolveOrgId(org);
         if (!orgId) return;
         const { data: tx } = await supabase.from('transactions_v2').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
         setRecent(tx || []);

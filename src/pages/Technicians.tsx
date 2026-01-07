@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 import { useData } from '../contexts/DataContext';
 import { UserIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
@@ -28,12 +29,11 @@ export default function Technicians() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
+        const orgId = await resolveOrgId(org);
         if (!orgId) { setError('Organization not found'); setTechs([]); setLoading(false); return; }
         const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
         setTechs((data||[]) as any);
-        supabase.channel(`techs_${orgId}`)
+        const ch = supabase.channel(`techs_${orgId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, async ()=>{
             const { data } = await supabase.from('technicians').select('id, full_name as name, email, specialization, is_active as status').eq('org_id', orgId).order('full_name');
             setTechs((data||[]) as any);

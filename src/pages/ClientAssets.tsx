@@ -12,6 +12,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Asset {
@@ -74,8 +75,7 @@ export default function ClientAssets() {
 
     try {
       setLoading(true);
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
+      const orgId = await resolveOrgId(org);
       if (!orgId) { setAssets([]); setLoading(false); return; }
       // Load assets visible to this client (assigned to them or available)
       let query = supabase
@@ -102,8 +102,7 @@ export default function ClientAssets() {
     if (!SUPABASE_CONFIGURED) return;
 
     try {
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
+      const orgId = await resolveOrgId(org);
       if (!orgId) return;
       // Load categories
       const { data: categoriesData } = await supabase
