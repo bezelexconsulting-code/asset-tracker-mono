@@ -50,7 +50,7 @@ const NFCManagement: React.FC = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('assets_v2')
+        .from('assets')
         .select('*')
         .eq('org_id', orgId);
 

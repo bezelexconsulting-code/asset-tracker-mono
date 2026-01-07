@@ -58,7 +58,7 @@ export default function ClientDashboard() {
       
       // Assigned assets: show checked_out assets for this org
       const { data: assignedData, error: assignedError } = await supabase
-        .from('assets_v2')
+        .from('assets')
         .select('*')
         .eq('org_id', orgId)
         .eq('status', 'checked_out')
@@ -70,7 +70,7 @@ export default function ClientDashboard() {
       // Load recent activity for this user
       const { data: activityData, error: activityError } = await supabase
         .from('transactions_v2')
-        .select('*, asset:assets_v2(name,asset_tag), from_location:locations(name), to_location:locations(name)')
+        .select('*, asset:assets(name,asset_tag), from_location:locations(name), to_location:locations(name)')
         .eq('org_id', orgId)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -90,7 +90,7 @@ export default function ClientDashboard() {
       // Overdue assets: heuristic — checked_out more than 7 days ago
       const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
       const { data: overdueData, error: overdueError } = await supabase
-        .from('assets_v2')
+        .from('assets')
         .select('*')
         .eq('org_id', orgId)
         .eq('status', 'checked_out')

@@ -78,7 +78,7 @@ export default function ClientCheckInOut() {
       const orgId = orgRow?.[0]?.id;
       const { data: locationsData } = await supabase.from('locations').select('id,name').eq('org_id', orgId);
       setLocations(locationsData || []);
-      let { data: assetsData } = await supabase.from('assets_unified').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
+      let { data: assetsData } = await supabase.from('assets').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
       if (mode === 'checkin') {
         assetsData = (assetsData || []).filter(a => a.status === 'checked_out');
       } else {
@@ -116,12 +116,12 @@ export default function ClientCheckInOut() {
       const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
       const orgId = orgRow?.[0]?.id;
       if (mode === 'checkin') {
-        const { error: updateError } = await supabase.from('assets_v2').update({ status: 'available', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
+        const { error: updateError } = await supabase.from('assets').update({ status: 'available', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
         const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_in', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
         if (transactionError) throw transactionError;
       } else {
-        const { error: updateError } = await supabase.from('assets_v2').update({ status: 'checked_out', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
+        const { error: updateError } = await supabase.from('assets').update({ status: 'checked_out', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
         const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_out', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
         if (transactionError) throw transactionError;

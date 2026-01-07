@@ -79,7 +79,7 @@ export default function ClientAssets() {
       if (!orgId) { setAssets([]); setLoading(false); return; }
       // Load assets visible to this client (assigned to them or available)
       let query = supabase
-        .from('assets_v2')
+        .from('assets')
         .select('*')
         .eq('org_id', orgId)
         .order('updated_at', { ascending: false });

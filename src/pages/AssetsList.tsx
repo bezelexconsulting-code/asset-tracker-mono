@@ -65,7 +65,7 @@ export default function AssetsList() {
       if (SUPABASE_CONFIGURED) {
         const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
         const orgId = orgRow?.[0]?.id;
-        const { data: as } = await supabase.from('assets_unified').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
+        const { data: as } = await supabase.from('assets').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
         const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name');
         setAssets((as||[]) as any);
         setCategories(cats||[]);
@@ -346,7 +346,7 @@ export default function AssetsList() {
                 if (SUPABASE_CONFIGURED) {
                   const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
                   const orgId = orgRow?.[0]?.id;
-                  const { data, error } = await supabase.from('assets_v2').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
+                  const { data, error } = await supabase.from('assets').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
                   if (error) { setError(String(error.message)); return; }
                   setAssets([...(data||[]), ...assets]);
                 } else {

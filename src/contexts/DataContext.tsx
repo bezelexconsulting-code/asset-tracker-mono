@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 
 type ID = string;
 
@@ -152,31 +154,85 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 function genId() {
-  return `id_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return crypto.randomUUID();
 }
 
 function getKey(org: string) {
   return `bez-demo-${org}`;
 }
 
+export function useData() {
+  return useContext(DataContext);
+}
+
 export function DataProvider({ org, children }: { org: string; children: React.ReactNode }) {
   const [state, setState] = useState<DataState>({ clients: [], locations: [], assets: [], technicians: [], activities: [], users: [], audit: [], jobs: [], categories: [] });
+  const [orgId, setOrgId] = useState<string | null>(null);
 
+  // Load from Supabase or LocalStorage
   useEffect(() => {
-    const key = getKey(org);
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      setState(JSON.parse(raw));
-      return;
-    }
-    const initial: DataState = { clients: [], locations: [], assets: [], technicians: [], activities: [], users: [], audit: [], jobs: [], categories: [] };
-    localStorage.setItem(key, JSON.stringify(initial));
-    setState(initial);
+    let mounted = true;
+    (async () => {
+      if (SUPABASE_CONFIGURED) {
+        const oid = await resolveOrgId(org);
+        if (!mounted) return;
+        setOrgId(oid);
+        if (oid) {
+          // Fetch all data in parallel
+          const [clients, locations, assets, technicians, jobs, activities] = await Promise.all([
+            supabase.from('clients').select('*').eq('org_id', oid),
+            supabase.from('locations').select('*').eq('org_id', oid),
+            supabase.from('assets').select('*').eq('org_id', oid),
+            supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status, username, password').eq('org_id', oid),
+            supabase.from('jobs').select('*').eq('org_id', oid),
+            supabase.from('activities').select('*').eq('org_id', oid),
+          ]);
+          
+          if (mounted) {
+            setState(prev => ({
+              ...prev,
+              clients: (clients.data || []) as Client[],
+              locations: (locations.data || []) as Location[],
+              assets: (assets.data || []) as Asset[],
+              technicians: (technicians.data || []).map((t: any) => ({ ...t, status: t.status ? 'active' : 'inactive' })),
+              jobs: (jobs.data || []) as Job[],
+              activities: (activities.data || []) as Activity[],
+            }));
+          }
+
+          // Subscribe to realtime changes
+          const ch = supabase.channel(`org_${oid}`)
+            .on('postgres_changes', { event: '*', schema: 'public', filter: `org_id=eq.${oid}` }, (payload) => {
+              // Simple reload for now, or handle specific table updates
+              // Implementing full realtime sync is complex, for now we rely on optimistic updates and occasional reloads
+              // Or we can manually patch the state based on payload.table
+            })
+            .subscribe();
+            
+          return () => { supabase.removeChannel(ch); };
+        }
+      } else {
+        // Local storage fallback
+        const key = getKey(org);
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          setState(JSON.parse(raw));
+        } else {
+          const initial: DataState = { clients: [], locations: [], assets: [], technicians: [], activities: [], users: [], audit: [], jobs: [], categories: [] };
+          localStorage.setItem(key, JSON.stringify(initial));
+          setState(initial);
+        }
+      }
+    })();
+    return () => { mounted = false; };
   }, [org]);
 
+  // Persist to LocalStorage (only if not using Supabase, or as backup?)
   useEffect(() => {
-    const key = getKey(org);
-    localStorage.setItem(key, JSON.stringify(state));
+    if (!SUPABASE_CONFIGURED) {
+      const key = getKey(org);
+      localStorage.setItem(key, JSON.stringify(state));
+    }
   }, [org, state]);
 
   const value = useMemo<DataContextValue>(() => ({
@@ -185,141 +241,134 @@ export function DataProvider({ org, children }: { org: string; children: React.R
     listClients: () => state.clients,
     addClient: (c) => {
       const newClient: Client = { id: genId(), ...c };
-      setState((s) => ({
-        ...s,
-        clients: [newClient, ...s.clients],
-        audit: [
-          { id: genId(), org_id: org, type: 'create', entity: 'client', entity_id: newClient.id, actor: 'system', created_at: new Date().toISOString(), details: { name: newClient.name } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, clients: [newClient, ...s.clients] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('clients').insert({ ...newClient, org_id: orgId }).then();
+      }
       return newClient;
     },
     updateClient: (id, patch) => {
-      setState((s) => ({
-        ...s,
-        clients: s.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-        audit: [
-          { id: genId(), org_id: org, type: 'update', entity: 'client', entity_id: id, actor: 'system', created_at: new Date().toISOString(), details: { patch } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, clients: s.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
+      if (SUPABASE_CONFIGURED) {
+        supabase.from('clients').update(patch).eq('id', id).then();
+      }
     },
     listLocations: (clientId) => state.locations.filter((l) => !clientId || l.client_id === clientId),
     addLocation: (l) => {
-      const newLoc: Location = { id: genId(), org_id: org, ...l };
-      setState((s) => ({
-        ...s,
-        locations: [newLoc, ...s.locations],
-        audit: [
-          { id: genId(), org_id: org, type: 'create', entity: 'location', entity_id: newLoc.id, actor: 'system', created_at: new Date().toISOString(), details: { name: newLoc.name } },
-          ...s.audit,
-        ],
-      }));
+      const newLoc: Location = { id: genId(), org_id: org, ...l }; // org_id in local obj is slug, but DB needs uuid
+      const dbLoc = { ...newLoc, org_id: orgId || undefined };
+      setState((s) => ({ ...s, locations: [newLoc, ...s.locations] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('locations').insert({ ...newLoc, org_id: orgId }).then();
+      }
       return newLoc;
     },
     listAssets: (clientId) => clientId ? state.assets.filter((a) => a.client_id === clientId) : state.assets,
     addAsset: (a) => {
       const newAsset: Asset = { id: genId(), org_id: org, status: a.status || 'available', description: a.description || '', ...a };
-      setState((s) => ({
-        ...s,
-        assets: [newAsset, ...s.assets],
-        audit: [
-          { id: genId(), org_id: org, type: 'create', entity: 'asset', entity_id: newAsset.id, actor: 'system', created_at: new Date().toISOString(), details: { name: newAsset.name } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, assets: [newAsset, ...s.assets] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('assets').insert({ ...newAsset, org_id: orgId }).then();
+      }
       return newAsset;
     },
     updateAsset: (id, patch) => {
-      setState((s) => {
-        const before = s.assets.find((a) => a.id === id);
-        const nextAssets = s.assets.map((a) => (a.id === id ? { ...a, ...patch } : a));
-        return {
-          ...s,
-          assets: nextAssets,
-          audit: [
-            { id: genId(), org_id: org, type: 'update', entity: 'asset', entity_id: id, actor: 'system', created_at: new Date().toISOString(), details: { before, patch } },
-            ...s.audit,
-          ],
-        };
-      });
+      setState((s) => ({ ...s, assets: s.assets.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+      if (SUPABASE_CONFIGURED) {
+        supabase.from('assets').update(patch).eq('id', id).then();
+      }
     },
     listTechnicians: () => state.technicians,
     addTechnician: (t) => {
       const newTech: Technician = { id: genId(), ...t };
       setState((s) => ({ ...s, technicians: [newTech, ...s.technicians] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('technicians').insert({ 
+          id: newTech.id, 
+          org_id: orgId, 
+          full_name: newTech.name, 
+          email: newTech.email, 
+          phone: newTech.phone, 
+          specialization: newTech.specialization,
+          is_active: newTech.status === 'active'
+        }).then();
+      }
       return newTech;
     },
     updateTechnician: (id, patch) => {
-      setState((s) => ({
-        ...s,
-        technicians: s.technicians.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-        audit: [
-          { id: genId(), org_id: org, type: 'update', entity: 'technician', entity_id: id, actor: 'system', created_at: new Date().toISOString(), details: { patch } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, technicians: s.technicians.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+      if (SUPABASE_CONFIGURED) {
+        const dbPatch: any = {};
+        if (patch.name) dbPatch.full_name = patch.name;
+        if (patch.email !== undefined) dbPatch.email = patch.email;
+        if (patch.phone !== undefined) dbPatch.phone = patch.phone;
+        if (patch.specialization !== undefined) dbPatch.specialization = patch.specialization;
+        if (patch.status) dbPatch.is_active = patch.status === 'active';
+        if (patch.username !== undefined) dbPatch.username = patch.username;
+        if (patch.password !== undefined) dbPatch.password = patch.password;
+        
+        if (Object.keys(dbPatch).length > 0) {
+          supabase.from('technicians').update(dbPatch).eq('id', id).then();
+        }
+      }
     },
     listActivities: () => state.activities,
     addActivity: (a) => {
-      const newAct: Activity = { id: genId(), org_id: org, created_at: new Date().toISOString(), ...a } as Activity;
-      setState((s) => ({
-        ...s,
-        activities: [newAct, ...s.activities],
-        audit: [
-          { id: genId(), org_id: org, type: 'activity', entity: 'activity', entity_id: newAct.id, actor: 'system', created_at: new Date().toISOString(), details: { type: newAct.type, status: newAct.status, asset_id: newAct.asset_id } },
-          ...s.audit,
-        ],
-      }));
+      const newAct: Activity = { id: genId(), org_id: org, created_at: new Date().toISOString(), ...a };
+      setState((s) => ({ ...s, activities: [newAct, ...s.activities] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('activities').insert({ ...newAct, org_id: orgId }).then();
+      }
       return newAct;
     },
     listJobs: () => state.jobs,
     addJob: (j) => {
-      const job: Job = { id: genId(), org_id: org, status: j.status || 'assigned', created_at: new Date().toISOString(), checklist: j.checklist || [], notes: j.notes || '', description: j.description || '', attachments: j.attachments || [], parts: j.parts || [], labor_minutes: j.labor_minutes || 0, next_service_at: j.next_service_at || '', needs_approval: j.needs_approval || false, ...j };
+      const job: Job = { 
+        id: genId(), 
+        org_id: org, 
+        status: j.status || 'assigned', 
+        created_at: new Date().toISOString(), 
+        checklist: j.checklist || [], 
+        notes: j.notes || '', 
+        description: j.description || '', 
+        attachments: j.attachments || [], 
+        parts: j.parts || [], 
+        labor_minutes: j.labor_minutes || 0, 
+        next_service_at: j.next_service_at || '', 
+        needs_approval: j.needs_approval || false, 
+        ...j 
+      };
       setState((s) => ({ ...s, jobs: [job, ...s.jobs] }));
+      if (SUPABASE_CONFIGURED && orgId) {
+        supabase.from('jobs').insert({ ...job, org_id: orgId }).then();
+      }
       return job;
     },
-    updateJob: (id, patch) => setState((s) => ({ ...s, jobs: s.jobs.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+    updateJob: (id, patch) => {
+      setState((s) => ({ ...s, jobs: s.jobs.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
+      if (SUPABASE_CONFIGURED) {
+        supabase.from('jobs').update(patch).eq('id', id).then();
+      }
+    },
     listCategories: () => state.categories,
     addCategory: (c) => {
       const cat: Category = { id: genId(), org_id: org, ...c };
       setState((s) => ({ ...s, categories: [cat, ...s.categories] }));
+      // Categories table not yet in Supabase migration, maybe add later?
       return cat;
     },
     listUsers: () => state.users,
     addUser: (u) => {
       const newUser: User = { id: genId(), active: true, ...u };
-      setState((s) => ({
-        ...s,
-        users: [newUser, ...s.users],
-        audit: [
-          { id: genId(), org_id: org, type: 'create', entity: 'user', entity_id: newUser.id, actor: 'system', created_at: new Date().toISOString(), details: { name: newUser.name, role: newUser.role } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, users: [newUser, ...s.users] }));
+      // Users table logic matches Supabase users table?
       return newUser;
     },
     updateUser: (id, patch) => {
-      setState((s) => ({
-        ...s,
-        users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
-        audit: [
-          { id: genId(), org_id: org, type: 'update', entity: 'user', entity_id: id, actor: 'system', created_at: new Date().toISOString(), details: { patch } },
-          ...s.audit,
-        ],
-      }));
+      setState((s) => ({ ...s, users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) }));
     },
     listAudit: () => state.audit,
-  }), [org, state]);
-
-  // No demo loader in production
+  }), [state, org, orgId]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
-}
-
-export function useData() {
-  const ctx = useContext(DataContext);
-  if (!ctx) throw new Error('DataContext not found');
-  return ctx;
 }

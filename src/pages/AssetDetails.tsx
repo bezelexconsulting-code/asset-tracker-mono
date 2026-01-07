@@ -19,7 +19,7 @@ export default function AssetDetails() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
-        const { data } = await supabase.from('assets_unified').select('*').eq('id', id).limit(1);
+        const { data } = await supabase.from('assets').select('*').eq('id', id).limit(1);
         const found = data?.[0];
         if (found) {
           setAsset(found);
@@ -143,7 +143,7 @@ export default function AssetDetails() {
               onClick={async () => {
                 setError(null);
                 if (SUPABASE_CONFIGURED) {
-                  const { error } = await supabase.from('assets_v2').update({ name: form.name, asset_tag: form.asset_tag, description: form.description || '' }).eq('id', id);
+                  const { error } = await supabase.from('assets').update({ name: form.name, asset_tag: form.asset_tag, description: form.description || '' }).eq('id', id);
                   if (error) { setError(String(error.message)); return; }
                   setAsset({ ...asset, name: form.name, asset_tag: form.asset_tag, description: form.description || '' });
                 } else {

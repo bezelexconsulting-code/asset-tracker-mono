@@ -169,8 +169,8 @@ export default function Dashboard() {
     (async () => {
       const orgId = await resolveOrgId(org);
       if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
-      const { count: assetsCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-      const { count: checkedCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
+      const { count: assetsCount } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+      const { count: checkedCount } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
       const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       setCounts({ assets: assetsCount || 0, checked: checkedCount || 0, clients: clientsCount || 0, techs: techsCount || 0 });
@@ -178,11 +178,11 @@ export default function Dashboard() {
       setRecent(tx || []);
     })();
     const ch = supabase.channel(`dashboard_${org}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets_v2' }, async ()=>{
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, async ()=>{
         const orgId = await resolveOrgId(org);
         if (!orgId) return;
-        const { count: assetsCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-        const { count: checkedCount } = await supabase.from('assets_v2').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
+        const { count: assetsCount } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        const { count: checkedCount } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
         setCounts((c)=> ({ ...c, assets: assetsCount || 0, checked: checkedCount || 0 }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
