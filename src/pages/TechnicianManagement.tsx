@@ -64,6 +64,9 @@ export const TechnicianManagement: React.FC = () => {
     
     try {
       setLoading(true);
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      if (!orgId) { setTechnicians([]); setLoading(false); return; }
       const { data, error } = await supabase
         .from('technicians')
         .select(`
@@ -71,7 +74,7 @@ export const TechnicianManagement: React.FC = () => {
           work_order_count:work_orders(count),
           client_count:work_orders(client_id, distinct)
         `)
-        .eq('org_id', org)
+        .eq('org_id', orgId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -102,7 +105,7 @@ export const TechnicianManagement: React.FC = () => {
           .from('technicians')
           .insert({
             ...data,
-            org_id: org,
+            org_id: orgId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });

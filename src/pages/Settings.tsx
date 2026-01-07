@@ -6,12 +6,37 @@ export default function Settings() {
   const { org } = useParams();
   const { settings, setOrgProfile, setBranding, setAssetsConfig, setNfcConfig, setCheckWorkflow, setNotifications, exportJSON, importJSON } = useSettings();
   const [json, setJson] = useState('');
+  const [health, setHealth] = useState<{ supabase: boolean; org_slug?: string; org_id?: string | null } | null>(null);
+  React.useEffect(()=> {
+    (async ()=>{
+      const ok = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+      let orgId: string | null = null;
+      try {
+        const { data } = await (await import('../lib/supabase')).supabase.from('organizations').select('id').eq('slug', org).limit(1);
+        orgId = data?.[0]?.id || null;
+      } catch {}
+      setHealth({ supabase: ok, org_slug: org, org_id: orgId });
+    })();
+  }, [org]);
 
   return (
     <div className="space-y-8">
       <div className="bg-white border border-gray-200 rounded p-6">
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-600">Organization: {org}</p>
+      </div>
+      <div className="bg-white border border-gray-200 rounded p-6 space-y-2">
+        <h2 className="text-lg font-semibold">Connection Health</h2>
+        <div className="text-sm text-gray-700">Supabase: {health?.supabase ? 'connected' : 'not configured'}</div>
+        <div className="text-sm text-gray-700">Org slug: {health?.org_slug}</div>
+        <div className="text-sm text-gray-700">Org UUID: {health?.org_id || 'not found'}</div>
+        {health?.supabase && !health?.org_id && (
+          <button className="mt-2 px-3 py-2 rounded bg-blue-600 text-white" onClick={async()=> {
+            const { ensureOrgExists } = await import('../lib/org');
+            const id = await ensureOrgExists(org, { name: settings.orgProfile.name || org, contact_email: settings.orgProfile.contact_email || '' });
+            setHealth((h)=> ({ ...h!, org_id: id }));
+          }}>Create Organization</button>
+        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded p-6 space-y-4">

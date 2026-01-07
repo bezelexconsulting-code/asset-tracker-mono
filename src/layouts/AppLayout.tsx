@@ -3,6 +3,7 @@ import { NavLink, Outlet, useParams, useLocation } from 'react-router-dom';
 import { DataProvider } from '../contexts/DataContext';
 import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { ensureOrgExists } from '../lib/org';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 export default function AppLayout() {
@@ -61,7 +62,12 @@ export default function AppLayout() {
       (async () => {
         if (!SUPABASE_CONFIGURED || !org) return;
         const { data } = await supabase.from('organizations').select('*').eq('slug', org).limit(1);
-        const o = data?.[0];
+        let o = data?.[0];
+        if (!o) {
+          const id = await ensureOrgExists(org, { name: org });
+          const { data: newly } = await supabase.from('organizations').select('*').eq('id', id).limit(1);
+          o = newly?.[0];
+        }
         if (o) setBranding({ logo_url: o.branding_logo_url || '', primary_color: o.branding_primary_color || '', org_name: o.name || '' });
       })();
     }, [org]);

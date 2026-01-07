@@ -52,16 +52,15 @@ export default function ClientDashboard() {
 
     try {
       setLoading(true);
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      if (!orgId) { setAssignedAssets([]); setRecentActivity([]); setOverdueAssets([]); setStats([]); setLoading(false); return; }
       
       // Load user's assigned assets
       const { data: assignedData, error: assignedError } = await supabase
-        .from('assets')
-        .select(`
-          *,
-          category:categories(name),
-          location:locations(name)
-        `)
-        .eq('org_id', org)
+        .from('assets_v2')
+        .select('*')
+        .eq('org_id', orgId)
         .eq('assigned_to_id', user.id)
         .eq('status', 'checked_out')
         .order('updated_at', { ascending: false });
@@ -71,13 +70,9 @@ export default function ClientDashboard() {
 
       // Load recent activity for this user
       const { data: activityData, error: activityError } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          asset:assets(asset_tag, name),
-          location:locations(name)
-        `)
-        .eq('org_id', org)
+        .from('transactions_v2')
+        .select('*')
+        .eq('org_id', orgId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -87,30 +82,21 @@ export default function ClientDashboard() {
       const formattedActivity: RecentActivity[] = (activityData || []).map((t: any) => ({
         id: t.id,
         type: t.transaction_type as 'checkin' | 'checkout',
-        asset_tag: t.asset.asset_tag,
-        asset_name: t.asset.name,
+        asset_tag: t.asset_tag || '',
+        asset_name: t.asset_name || '',
         timestamp: t.created_at,
-        location: t.location?.name
+        location: t.location_name || ''
       }));
       setRecentActivity(formattedActivity);
 
       // Load overdue assets assigned to user
       const { data: overdueData, error: overdueError } = await supabase
-        .from('assets')
-        .select(`
-          *,
-          category:categories(name),
-          location:locations(name),
-          transactions!inner(
-            expected_return_date,
-            transaction_type
-          )
-        `)
-        .eq('org_id', org)
+        .from('assets_v2')
+        .select('*')
+        .eq('org_id', orgId)
         .eq('assigned_to_id', user.id)
-        .eq('transactions.transaction_type', 'checkout')
-        .lt('transactions.expected_return_date', new Date().toISOString())
-        .order('transactions.expected_return_date', { ascending: true });
+        .eq('status', 'checked_out')
+        .order('updated_at', { ascending: false });
 
       if (overdueError) throw overdueError;
       setOverdueAssets(overdueData || []);

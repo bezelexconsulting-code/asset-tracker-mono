@@ -74,17 +74,14 @@ export default function ClientAssets() {
 
     try {
       setLoading(true);
-      
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      if (!orgId) { setAssets([]); setLoading(false); return; }
       // Load assets visible to this client (assigned to them or available)
       let query = supabase
-        .from('assets')
-        .select(`
-          *,
-          category:categories(name),
-          location:locations(name),
-          assigned_to:users(full_name)
-        `)
-        .eq('org_id', org)
+        .from('assets_v2')
+        .select('*')
+        .eq('org_id', orgId)
         .order('updated_at', { ascending: false });
 
       // Client can see their assigned assets and available assets
@@ -105,18 +102,21 @@ export default function ClientAssets() {
     if (!SUPABASE_CONFIGURED) return;
 
     try {
+      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+      const orgId = orgRow?.[0]?.id;
+      if (!orgId) return;
       // Load categories
       const { data: categoriesData } = await supabase
         .from('categories')
         .select('id, name')
-        .eq('org_id', org);
+        .eq('org_id', orgId);
       setCategories(categoriesData || []);
 
       // Load locations
       const { data: locationsData } = await supabase
         .from('locations')
         .select('id, name')
-        .eq('org_id', org);
+        .eq('org_id', orgId);
       setLocations(locationsData || []);
     } catch (error) {
       console.error('Error loading filters:', error);
