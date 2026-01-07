@@ -74,8 +74,7 @@ export default function Login() {
     const techId = params.get('tech');
     let techs = listTechnicians();
     if (SUPABASE_CONFIGURED) {
-      const { data: orgs } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgs?.[0]?.id;
+      const orgId = await resolveOrgId(org);
       const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId);
       techs = data || [] as any;
     }

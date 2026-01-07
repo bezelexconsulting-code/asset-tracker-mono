@@ -25,6 +25,7 @@ function key(org: string) {
 
 export function AuthProvider({ org, children }: { org: string; children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const raw = localStorage.getItem(key(org)) || sessionStorage.getItem(key(org));
@@ -37,6 +38,7 @@ export function AuthProvider({ org, children }: { org: string; children: React.R
     } else {
       setUser(null);
     }
+    setLoading(false);
   }, [org]);
 
   useEffect(() => {
