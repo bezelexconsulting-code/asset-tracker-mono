@@ -15,6 +15,7 @@ import {
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import NFCScanner from '../components/NFCScanner';
+import { addPendingTransaction, processQueue } from '../lib/offlineQueue';
 
 interface Asset {
   id: string;
@@ -85,6 +86,10 @@ export default function ClientCheckInOut() {
         assetsData = (assetsData || []).filter(a => a.status === 'available');
       }
       setAssets((assetsData || []) as any);
+      await processQueue(async (tx)=>{
+        const { error } = await supabase.from('transactions').insert(tx as any);
+        if (error) throw error;
+      });
     } catch (err) {
       setError('Failed to load assets');
     } finally {
@@ -118,12 +123,14 @@ export default function ClientCheckInOut() {
       if (mode === 'checkin') {
         const { error: updateError } = await supabase.from('assets').update({ status: 'available', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
-        const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_in', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
+        const tx = { org_id: orgId, asset_id: selectedAsset.id, type: 'check_in', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes, created_at: now };
+        const { error: transactionError } = await supabase.from('transactions').insert(tx as any);
         if (transactionError) throw transactionError;
       } else {
         const { error: updateError } = await supabase.from('assets').update({ status: 'checked_out', location_id: formData.location_id || null }).eq('id', selectedAsset.id);
         if (updateError) throw updateError;
-        const { error: transactionError } = await supabase.from('transactions_v2').insert({ org_id: orgId, asset_id: selectedAsset.id, type: 'check_out', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes });
+        const tx = { org_id: orgId, asset_id: selectedAsset.id, type: 'check_out', from_location_id: selectedAsset.location_id || null, to_location_id: formData.location_id || null, notes: formData.notes, created_at: now };
+        const { error: transactionError } = await supabase.from('transactions').insert(tx as any);
         if (transactionError) throw transactionError;
       }
 
@@ -146,6 +153,19 @@ export default function ClientCheckInOut() {
 
     } catch (err) {
       console.error('Error processing transaction:', err);
+      try {
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
+        const orgId = orgRow?.[0]?.id;
+        addPendingTransaction({
+          org_id: orgId,
+          asset_id: selectedAsset!.id,
+          type: mode === 'checkin' ? 'check_in' : 'check_out',
+          from_location_id: selectedAsset!.location_id || null,
+          to_location_id: formData.location_id || null,
+          notes: formData.notes,
+          created_at: new Date().toISOString()
+        });
+      } catch {}
       setError('Failed to process transaction');
     } finally {
       setLoading(false);

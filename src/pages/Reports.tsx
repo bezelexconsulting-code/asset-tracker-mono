@@ -40,6 +40,31 @@ export default function Reports() {
     downloadBlob(`report_${client?.name || 'all'}.csv`, new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
   };
 
+  const exportTransactionsCSV = () => {
+    const acts = listActivities() as any[];
+    const rows = [
+      ['Org', settings.orgProfile.name || org || ''],
+      [],
+      ['Type', 'Asset Tag', 'Asset Name', 'From', 'To', 'Timestamp', 'Notes'],
+      ...acts.map((t:any)=> [t.type, t.asset?.asset_tag||'', t.asset?.name||'', t.from_location?.name||'', t.to_location?.name||'', t.created_at, t.notes||''])
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v??'').replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadBlob(`transactions_${client?.name || 'all'}.csv`, new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  };
+
+  const exportJobsCSV = () => {
+    const jobs = (listJobs() as any[]).filter(j=> (!clientId || j.client_id===clientId));
+    const rows = [
+      ['Client', client?.name || 'All'],
+      ['Org', settings.orgProfile.name || org || ''],
+      [],
+      ['Title','Status','Due','Assigned Tech','Location'],
+      ...jobs.map((j:any)=> [j.title, j.status, j.due_at||'', j.technician_id||'', j.location_id||''])
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${String(v??'').replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadBlob(`jobs_${client?.name || 'all'}.csv`, new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  };
+
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Report');
@@ -88,6 +113,8 @@ export default function Reports() {
         <div className="flex items-center space-x-2">
           <button onClick={exportCSV} className="px-3 py-2 rounded bg-gray-900 text-white">Export CSV</button>
           <button onClick={exportExcel} className="px-3 py-2 rounded bg-blue-600 text-white">Export Excel</button>
+          <button onClick={exportTransactionsCSV} className="px-3 py-2 rounded bg-green-600 text-white">Export Transactions</button>
+          <button onClick={exportJobsCSV} className="px-3 py-2 rounded bg-purple-600 text-white">Export Jobs</button>
         </div>
       </div>
 

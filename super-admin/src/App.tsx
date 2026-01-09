@@ -6,9 +6,7 @@ import SuperDashboard from './pages/SuperDashboard';
 import SuperOrgs from './pages/SuperOrgs';
 import SuperRequests from './pages/SuperRequests';
 import SuperBilling from './pages/SuperBilling';
-import SuperTickets from './pages/SuperTickets';
 import SuperTechs from './pages/SuperTechs';
-import SuperFlags from './pages/SuperFlags';
 import SuperBranding from './pages/SuperBranding';
 
 export default function App() {
@@ -22,9 +20,7 @@ export default function App() {
           <Route path="orgs" element={<SuperOrgs />} />
           <Route path="requests" element={<SuperRequests />} />
           <Route path="billing" element={<SuperBilling />} />
-          <Route path="tickets" element={<SuperTickets />} />
           <Route path="techs" element={<SuperTechs />} />
-          <Route path="flags" element={<SuperFlags />} />
           <Route path="branding" element={<SuperBranding />} />
         </Route>
       </Route>

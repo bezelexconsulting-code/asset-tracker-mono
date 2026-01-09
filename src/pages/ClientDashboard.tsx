@@ -69,7 +69,7 @@ export default function ClientDashboard() {
 
       // Load recent activity for this user
       const { data: activityData, error: activityError } = await supabase
-        .from('transactions_v2')
+        .from('transactions')
         .select('*, asset:assets(name,asset_tag), from_location:locations(name), to_location:locations(name)')
         .eq('org_id', orgId)
         .order('created_at', { ascending: false })

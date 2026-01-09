@@ -184,7 +184,7 @@ export default function Dashboard() {
       const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       setCounts({ assets: assetsCount || 0, checked: checkedCount || 0, clients: clientsCount || 0, techs: techsCount || 0 });
-      const { data: tx } = await supabase.from('transactions_v2').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
+      const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
     })();
     const ch = supabase.channel(`dashboard_${org}`)
@@ -207,10 +207,10 @@ export default function Dashboard() {
         const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
         setCounts((c)=> ({ ...c, clients: clientsCount || 0 }));
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions_v2' }, async ()=>{
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, async ()=>{
         const orgId = await resolveOrgId(org);
         if (!orgId) return;
-        const { data: tx } = await supabase.from('transactions_v2').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
+        const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
         setRecent(tx || []);
       })
       .subscribe();

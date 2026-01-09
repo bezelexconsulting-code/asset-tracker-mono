@@ -4,6 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { resolveOrgId } from '../lib/org';
 import bcrypt from 'bcryptjs';
 
 export default function Login() {

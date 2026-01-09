@@ -36,12 +36,14 @@ export default function MobileApp() {
   const [siteId, setSiteId] = useState<string>('');
   const [sigJobId, setSigJobId] = useState<string | null>(null);
   const [exec, setExec] = useState<Record<string, { before?: string; after?: string; parts: Array<{ name: string; qty: number }>; returnDate?: string }>>({});
+  const [pendingCount, setPendingCount] = useState<number>(0);
 
   useEffect(() => {
     registerServiceWorker().then(subscribePush).catch(()=>{});
     navigator.serviceWorker?.addEventListener('message', (e: any) => {
       if (e.data?.type === 'SYNC_QUEUE') processQueue();
     });
+    window.addEventListener('online', () => processQueue());
     const params = new URLSearchParams(window.location.search);
     const scanTag = params.get('scan');
     if (scanTag) {
@@ -51,6 +53,7 @@ export default function MobileApp() {
         setAssetModalId(a.id);
       }
     }
+    setPendingCount(getQueue().length);
   }, []);
 
   function processQueue() {
@@ -71,6 +74,7 @@ export default function MobileApp() {
       } catch {}
     });
     clearQueue();
+    setPendingCount(0);
   }
 
   function commitUpdateAsset(id: string, patch: any) {
@@ -215,6 +219,11 @@ export default function MobileApp() {
             <div className="flex-1" />
             <div className="w-40">
               <input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search" className="w-full px-3 py-2 rounded bg-white bg-opacity-10 text-white placeholder-blue-100 text-xs border border-white/20" />
+            </div>
+            <div className="ml-3">
+              <button onClick={processQueue} className="px-3 py-2 rounded bg-white bg-opacity-10 text-white text-xs border border-white/20">
+                Sync Pending {pendingCount>0 && <span className="ml-1 inline-block px-1.5 py-0.5 rounded bg-yellow-400 text-gray-900">{pendingCount}</span>}
+              </button>
             </div>
           </div>
         </div>

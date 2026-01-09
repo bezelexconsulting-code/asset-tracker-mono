@@ -17,7 +17,7 @@ interface Asset {
 
 interface NFCTag {
   id: string;
-  tag_id: string;
+  tag_uid: string;
   tag_type: string;
   asset_id: string;
   last_programmed: string;
@@ -94,7 +94,7 @@ const NFCManagement: React.FC = () => {
       const { error } = await supabase
         .from('nfc_tags')
         .update({ is_active: false })
-        .eq('tag_id', tagId);
+        .eq('tag_uid', tagId);
 
       if (error) throw error;
       fetchNFCTags();
@@ -257,7 +257,7 @@ const NFCManagement: React.FC = () => {
                   {nfcTags.map((tag) => (
                     <tr key={tag.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {tag.tag_id}
+                        {tag.tag_uid}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {tag.asset ? (

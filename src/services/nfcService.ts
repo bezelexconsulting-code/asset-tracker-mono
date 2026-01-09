@@ -10,7 +10,7 @@ export interface NFCAssetData {
 }
 
 export interface NFCTagInfo {
-  tag_id: string;
+  tag_uid: string;
   tag_type: string;
   last_programmed: string;
   programmed_by: string;
@@ -124,13 +124,13 @@ export class NFCService {
                 *,
                 programmed_by:users(id, full_name)
               `)
-              .eq('tag_id', serialNumber)
+              .eq('tag_uid', serialNumber)
               .single();
 
             resolve({
               asset,
               tag_info: {
-                tag_id: serialNumber,
+                tag_uid: serialNumber,
                 tag_type: tagInfo?.tag_type || 'unknown',
                 last_programmed: tagInfo?.last_programmed || '',
                 programmed_by: tagInfo?.programmed_by?.full_name || '',
@@ -168,9 +168,9 @@ export class NFCService {
         .upsert({
           org_id: assetData.org_id,
           asset_id: assetData.asset_id,
-          tag_id: 'pending_scan', // Will be updated after successful write
+          tag_uid: 'pending_scan', // Will be updated after successful scan
           tag_type: 'NTAG215',
-          tag_data: assetData,
+          payload: assetData,
           last_programmed: new Date().toISOString(),
           programmed_by: (await supabase.auth.getUser()).data.user?.id
         });
@@ -178,6 +178,17 @@ export class NFCService {
       if (error) {
         throw new Error('Failed to save NFC tag record');
       }
+
+      try {
+        await supabase.from('audit_logs').insert({
+          org_id: assetData.org_id,
+          actor_id: (await supabase.auth.getUser()).data.user?.id || null,
+          entity: 'nfc_tags',
+          entity_id: null,
+          action: 'write_tag',
+          details: assetData,
+        });
+      } catch {}
 
       return {
         success: true,
@@ -224,7 +235,7 @@ export class NFCService {
         *,
         asset:assets(*, location:locations(id, name))
       `)
-      .eq('tag_id', tagId)
+      .eq('tag_uid', tagId)
       .single();
 
     if (error) {
@@ -238,7 +249,7 @@ export class NFCService {
     const { error } = await supabase
       .from('nfc_tags')
       .update(updates)
-      .eq('tag_id', tagId);
+      .eq('tag_uid', tagId);
 
     if (error) {
       throw new Error('Failed to update NFC tag');

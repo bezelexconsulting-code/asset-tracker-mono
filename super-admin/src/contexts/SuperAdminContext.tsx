@@ -144,9 +144,7 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
         { id: 'inv1', org_id: 'demo-org', amount_cents: 19900, period: '2025-12', status: 'open', created_at: new Date().toISOString() },
       ],
       tickets: [],
-      flags: [
-        { id: 'f1', org_id: 'demo-org', key: 'self_add_technician', enabled: false },
-      ],
+      flags: [],
       user_changes: [],
     };
     localStorage.setItem('bez-superadmin', JSON.stringify(demo));
@@ -159,10 +157,7 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       setState((s)=> ({ ...s, orgs: (orgs||[]).map((o:any)=> ({ id:o.id, org_id:o.slug, name:o.name, contact_email:o.contact_email, active:o.active })) }));
       const { data: reqs } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
       setState((s)=> ({ ...s, requests: (reqs||[]).map((r:any)=> ({ id:r.id, org_id:r.org_id, requester_email:r.requester_email, note:r.note, status:r.status, created_at:r.created_at, org_slug: r.org_slug })) }));
-      const { data: tickets } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-      setState((s)=> ({ ...s, tickets: (tickets||[]).map((t:any)=> ({ id:t.id, org_id:t.org_id, requester_email:t.requester_email, subject:t.subject, message:t.message, status:t.status, created_at:t.created_at })) }));
-      const { data: flags } = await supabase.from('flags').select('*');
-      setState((s)=> ({ ...s, flags: (flags||[]).map((f:any)=> ({ id:f.id, org_id:f.org_id, key:f.key, enabled: !!f.enabled })) }));
+      // tickets and flags removed from product scope
     })();
     const channel = supabase.channel('super-admin-requests')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, async (payload:any) => {
@@ -172,7 +167,7 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
         try {
           const { data: orgs } = await supabase.from('organizations').select('id, name, slug, contact_email, contact_phone').eq('id', r.org_id).limit(1);
           const org = orgs?.[0] || {};
-          const to = process.env.VITE_SUPERADMIN_EMAIL || '';
+      const to = (import.meta as any).env?.VITE_SUPERADMIN_EMAIL || '';
           const portal = (typeof window !== 'undefined' ? window.location.origin : '') + '/super/requests';
           if (to) {
             const html = `
@@ -189,14 +184,7 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
           }
         } catch {}
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, async ()=>{
-        const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-        setState((s)=> ({ ...s, tickets: (data||[]).map((t:any)=> ({ id:t.id, org_id:t.org_id, requester_email:t.requester_email, subject:t.subject, message:t.message, status:t.status, created_at:t.created_at })) }));
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'flags' }, async ()=>{
-        const { data } = await supabase.from('flags').select('*');
-        setState((s)=> ({ ...s, flags: (data||[]).map((f:any)=> ({ id:f.id, org_id:f.org_id, key:f.key, enabled: !!f.enabled })) }));
-      })
+      // subscriptions for tickets and flags removed
       .subscribe();
     return () => { try { supabase.removeChannel(channel); } catch {} };
   }, []);
@@ -267,31 +255,7 @@ export function SuperAdminProvider({ children }: { children: React.ReactNode }) 
       return created;
     },
     updateInvoice: (id, patch) => setState((s) => ({ ...s, invoices: s.invoices.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-    listTickets: () => state.tickets,
-    addTicket: (t) => {
-      const created = { id: genId(), created_at: new Date().toISOString(), status: t.status || 'open', ...t } as Ticket;
-      setState((s) => ({ ...s, tickets: [created, ...s.tickets] }));
-      return created;
-    },
-    updateTicket: (id, patch) => setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-    listFlags: () => state.flags,
-    setFlag: (org_id, key, enabled) => {
-      if (SUPABASE_CONFIGURED) {
-        (async()=>{
-          const { data } = await supabase.from('flags').select('*').eq('org_id', org_id).eq('key', key).limit(1);
-          if (data && data[0]) await supabase.from('flags').update({ enabled }).eq('id', data[0].id);
-          else await supabase.from('flags').insert({ org_id, key, enabled });
-        })();
-      }
-      setState((s) => ({
-        ...s,
-        flags: (() => {
-          const existing = s.flags.find((f) => f.org_id === org_id && f.key === key);
-          if (existing) return s.flags.map((f) => (f.org_id === org_id && f.key === key ? { ...f, enabled } : f));
-          return [{ id: genId(), org_id, key, enabled }, ...s.flags];
-        })(),
-      }));
-    },
+    // tickets and flags methods removed
     listUserChanges: () => state.user_changes || [],
     addUserChange: (c) => setState((s) => ({ ...s, user_changes: [{ id: genId(), created_at: new Date().toISOString(), ...c }, ...(s.user_changes || [])] })),
     notify,

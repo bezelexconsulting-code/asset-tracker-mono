@@ -9,8 +9,7 @@ export default function SuperLayout() {
     { to: '/super/requests', label: 'Requests' },
     { to: '/super/techs', label: 'Technicians' },
     { to: '/super/billing', label: 'Billing' },
-    { to: '/super/tickets', label: 'Tickets' },
-    { to: '/super/flags', label: 'Flags' },
+    // tickets and flags removed per product scope
   ];
   const isLogin = useLocation().pathname.toLowerCase().includes('/super/login');
   const { notify, clearNotify } = useSuperAdmin() as any;
