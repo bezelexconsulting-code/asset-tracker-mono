@@ -12,8 +12,8 @@ export default function TechDownload() {
   const [qrData, setQrData] = useState<string>('');
   const techParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tech') : '';
   useEffect(() => {
-    QRCode.toDataURL(link, { width: 180, margin: 1 }).then(setQrData).catch(() => setQrData(''));
-  }, [link]);
+    QRCode.toDataURL(appLink, { width: 180, margin: 1 }).then(setQrData).catch(() => setQrData(''));
+  }, [appLink]);
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded p-6">

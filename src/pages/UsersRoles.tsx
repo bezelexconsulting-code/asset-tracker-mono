@@ -34,7 +34,8 @@ export default function UsersRoles() {
   };
 
   const links = settings.billing.app_links || {};
-  const web = links.web_url || '';
+  const base = links.web_url || (typeof window !== 'undefined' ? window.location.origin : '');
+  const web = `${String(base).replace(/\/$/, '')}/${org}/tech`;
   const [qrData, setQrData] = useState<string>('');
   useEffect(() => {
     if (web) QRCode.toDataURL(web, { width: 130, margin: 1 }).then(setQrData).catch(() => setQrData(''));
