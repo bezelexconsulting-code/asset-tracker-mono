@@ -27,6 +27,7 @@ export default function SuperRequests() {
   const [orgId, setOrgId] = useState('');
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const requests = state.requests;
   return (
     <div className="space-y-6">
@@ -50,10 +51,19 @@ export default function SuperRequests() {
                 <td className="px-4 py-2 text-sm">{r.note}</td>
                 <td className="px-4 py-2 text-sm">{r.status}</td>
                 <td className="px-4 py-2 text-sm">
-                  <button className="px-2 py-1 rounded bg-blue-100" onClick={()=> updateRequest(r.id, { status: 'approved' })}>Approve</button>
-                  <button className="ml-2 px-2 py-1 rounded bg-red-100" onClick={()=> updateRequest(r.id, { status: 'rejected' })}>Reject</button>
-                  {SUPABASE_CONFIGURED && (
-                    <a href={`/super/techs?org_id=${r.org_id}&org_slug=${(r as any).org_slug || ''}`} className="ml-2 px-2 py-1 rounded bg-blue-600 text-white text-xs">Add Technician</a>
+                  <div className="flex items-center space-x-2">
+                    <button className="px-2 py-1 rounded bg-blue-100" onClick={()=> updateRequest(r.id, { status: 'approved' })}>Approve</button>
+                    <button className="px-2 py-1 rounded bg-red-100" onClick={()=> updateRequest(r.id, { status: 'rejected' })}>Reject</button>
+                    {SUPABASE_CONFIGURED && (
+                      <button className="px-2 py-1 rounded bg-blue-600 text-white text-xs" onClick={()=> setExpanded(expanded===r.id ? null : r.id)}>
+                        {expanded===r.id ? 'Hide' : 'Add Technician'}
+                      </button>
+                    )}
+                  </div>
+                  {SUPABASE_CONFIGURED && expanded===r.id && (
+                    <div className="mt-3">
+                      <AddTechInline orgId={r.org_id} onSaved={()=>{ setExpanded(null); }} />
+                    </div>
                   )}
                 </td>
               </tr>
