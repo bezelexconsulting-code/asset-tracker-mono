@@ -35,10 +35,10 @@ export default function ResetPassword() {
       if (SUPABASE_CONFIGURED) {
         const hashed = bcrypt.hashSync(pw, 10);
         await supabase.from('technicians').update({ password: '', hashed_password: hashed, must_reset_password: false }).eq('id', techId);
-        navigate(`/${org}/technicians/${techId}`); return;
+        navigate(`/${org}/login`); return;
       }
       updateTechnician(techId, { password: pw, must_reset_password: false } as any);
-      navigate(`/${org}/technicians/${techId}`);
+      navigate(`/${org}/login`);
       return;
     }
     setError('Invalid request');

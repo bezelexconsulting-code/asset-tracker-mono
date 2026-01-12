@@ -88,8 +88,8 @@ export default function Login() {
       navigate(`/${org}/reset-password?user=tech&tech=${t.id}`);
       return;
     }
-    login({ id: `tech_${Date.now()}`, email, role: 'technician', name: t?.name || 'Technician', technician_id: t?.id });
-    navigate(`/${org}/technicians/${t?.id}`);
+    login({ id: `tech_${Date.now()}`, email, role: 'technician', name: t?.full_name || t?.name || 'Technician', technician_id: t?.id });
+    navigate(`/${org}/tech/app`);
   };
 
   return (
