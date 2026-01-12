@@ -67,9 +67,10 @@ export default function AssetsList() {
         const orgId = orgRow?.[0]?.id;
         const { data: as } = await supabase.from('assets').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
         const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name');
+        const { data: cls } = await supabase.from('clients').select('id,name').eq('org_id', orgId).order('created_at', { ascending: false });
         setAssets((as||[]) as any);
         setCategories(cats||[]);
-        setClients([]);
+        setClients((cls||[]) as any);
       } else {
         const cls = listClients();
         setClients(cls);
@@ -318,7 +319,14 @@ export default function AssetsList() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Assigned To</label>
-              <input className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                value={createForm.client_id || ''}
+                onChange={(e)=> setCreateForm({ ...createForm, client_id: e.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {clients.map((c: any)=> (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
             </div>
             
             <div className="lg:col-span-2">
@@ -346,7 +354,7 @@ export default function AssetsList() {
                 if (SUPABASE_CONFIGURED) {
                   const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
                   const orgId = orgRow?.[0]?.id;
-                  const { data, error } = await supabase.from('assets').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
+                  const { data, error } = await supabase.from('assets').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, client_id: createForm.client_id || null, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
                   if (error) { setError(String(error.message)); return; }
                   setAssets([...(data||[]), ...assets]);
                 } else {

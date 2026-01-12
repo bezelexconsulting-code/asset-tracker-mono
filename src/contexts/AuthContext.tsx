@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export type Role = 'admin' | 'technician' | 'superadmin';
 
@@ -42,6 +43,17 @@ export function AuthProvider({ org, children }: { org: string; children: React.R
       }
     }
   }, [org]);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser((prev) => prev ?? { id: session.user.id, email: session.user.email || '', role: 'admin' });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => { try { sub?.subscription.unsubscribe(); } catch {} };
+  }, []);
 
   useEffect(() => {
     if (user) localStorage.setItem(key(org), JSON.stringify(user));

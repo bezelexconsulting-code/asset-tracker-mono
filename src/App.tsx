@@ -54,8 +54,8 @@ export default function App() {
           </Route>
         </Route>
         <Route path=":org/tech" element={<TechLayout />}>
+          <Route index element={<TechDownload />} />
           <Route element={<RequireTechnician />}>
-            <Route index element={<TechDownload />} />
             <Route path="app" element={<MobileApp />} />
           </Route>
         </Route>

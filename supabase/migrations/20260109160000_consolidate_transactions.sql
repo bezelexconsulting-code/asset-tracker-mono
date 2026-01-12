@@ -25,3 +25,4 @@ EXCEPTION WHEN others THEN
   -- Ignore errors to avoid breaking deployment; handle manually if needed
   NULL;
 END $$;
+
