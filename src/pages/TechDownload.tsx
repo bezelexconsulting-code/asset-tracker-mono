@@ -10,10 +10,27 @@ export default function TechDownload() {
   const link = links.web_url || (typeof window !== 'undefined' ? window.location.origin : '');
   const appLink = `${link.replace(/\/$/, '')}/${org}/tech/app`;
   const [qrData, setQrData] = useState<string>('');
+  const [installEvt, setInstallEvt] = useState<any>(null);
+  const [installed, setInstalled] = useState<boolean>(false);
   const techParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tech') : '';
   useEffect(() => {
     QRCode.toDataURL(appLink, { width: 180, margin: 1 }).then(setQrData).catch(() => setQrData(''));
   }, [appLink]);
+
+  useEffect(() => {
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(()=>{});
+      }
+      window.addEventListener('beforeinstallprompt', (e: any) => {
+        e.preventDefault();
+        setInstallEvt(e);
+      });
+      const media = window.matchMedia('(display-mode: standalone)');
+      setInstalled(media.matches);
+      media.addEventListener?.('change', () => setInstalled(media.matches));
+    } catch {}
+  }, []);
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded p-6">
@@ -49,6 +66,15 @@ export default function TechDownload() {
               <img src={qrData} alt="QR" className="w-28 h-28 border border-gray-200 rounded" />
             </div>
           )}
+          <div className="mt-3">
+            {installed ? (
+              <span className="text-xs text-green-700">Installed</span>
+            ) : installEvt ? (
+              <button className="px-3 py-2 rounded bg-blue-600 text-white text-xs" onClick={async()=>{ try { await installEvt.prompt(); setInstallEvt(null); } catch {} }}>Install App</button>
+            ) : (
+              <p className="text-xs text-gray-600">On Chrome Android, use “Add to Home screen”. On iOS Safari, use Share → Add to Home Screen.</p>
+            )}
+          </div>
         </div>
       </div>
       <div className="bg-white border border-gray-200 rounded p-4">
