@@ -31,6 +31,7 @@ export default function SuperTechs() {
   async function addTech() {
     setError(null);
     if (!orgId || !form.full_name) { setError('Select org and name'); return; }
+    if (!form.temp_password) { setError('Temporary password is required'); return; }
     const hashed = form.temp_password ? bcrypt.hashSync(form.temp_password, 10) : null;
     const { error: err } = await supabase.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
     if (err) { setError(err.message); return; }
@@ -53,6 +54,7 @@ export default function SuperTechs() {
         <input className="border border-gray-300 rounded px-3 py-2" placeholder="Email" value={form.email} onChange={(e)=> setForm({ ...form, email: e.target.value })} />
         <input className="border border-gray-300 rounded px-3 py-2" placeholder="Username" value={form.username} onChange={(e)=> setForm({ ...form, username: e.target.value })} />
         <input className="border border-gray-300 rounded px-3 py-2" placeholder="Specialization" value={form.specialization} onChange={(e)=> setForm({ ...form, specialization: e.target.value })} />
+        <input className="border border-gray-300 rounded px-3 py-2" placeholder="Temporary Password" type="password" value={form.temp_password} onChange={(e)=> setForm({ ...form, temp_password: e.target.value })} />
         <button onClick={addTech} className="px-3 py-2 rounded bg-blue-600 text-white">Add Technician</button>
       </div>
       {error && (<div className="p-3 border border-red-200 bg-red-50 rounded text-sm text-red-800">{error}</div>)}
