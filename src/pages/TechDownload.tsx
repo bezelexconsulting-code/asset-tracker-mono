@@ -34,6 +34,18 @@ export default function TechDownload() {
           <div className="font-semibold">Open App (Full Features)</div>
           <div className="text-sm text-gray-600">Dashboard, Clients, Assets, Jobs, NFC, Reports</div>
         </a>
+        <div className="bg-white border border-gray-200 rounded p-4">
+          <div className="text-sm text-gray-700">Direct Link</div>
+          <div className="flex items-center space-x-2 mt-2">
+            <span className="text-xs text-gray-500 break-all">{`${appLink}${techParam ? `?tech=${techParam}` : ''}`}</span>
+            <button className="px-2 py-1 text-xs rounded bg-gray-100" onClick={()=> navigator.clipboard?.writeText(`${appLink}${techParam ? `?tech=${techParam}` : ''}`)}>Copy</button>
+          </div>
+          {qrData && (
+            <div className="mt-3">
+              <img src={qrData} alt="QR" className="w-28 h-28 border border-gray-200 rounded" />
+            </div>
+          )}
+        </div>
       </div>
       <div className="bg-white border border-gray-200 rounded p-4">
         <h2 className="text-lg font-semibold">Feature Overview</h2>
