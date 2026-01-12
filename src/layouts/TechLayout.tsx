@@ -2,6 +2,9 @@ import { Outlet, useParams } from 'react-router-dom';
 import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { DataProvider } from '../contexts/DataContext';
+import { useEffect, useState } from 'react';
+import { resolveOrgId } from '../lib/org';
+import { supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 
 function Header() {
   const { org } = useParams();
@@ -27,6 +30,28 @@ function Header() {
 
 export default function TechLayout() {
   const { org } = useParams();
+  const [attached, setAttached] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const oid = await resolveOrgId(org || '');
+        if (!oid || attached) return;
+        const origFetch = window.fetch.bind(window);
+        window.fetch = (input: any, init: any = {}) => {
+          try {
+            const url = typeof input === 'string' ? input : (input?.url || '');
+            if (url.startsWith(`${supabaseUrl}/rest`)) {
+              const headers = { ...(init.headers || {}) } as Record<string, string>;
+              headers['app-org-id'] = oid;
+              init.headers = headers;
+            }
+          } catch {}
+          return origFetch(input, init);
+        };
+        setAttached(true);
+      } catch {}
+    })();
+  }, [org, attached]);
   return (
     <SettingsProvider>
       <AuthProvider org={org || ''}>
