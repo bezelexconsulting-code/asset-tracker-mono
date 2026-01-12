@@ -34,6 +34,10 @@ export default function TechDownload() {
           <div className="font-semibold">Open App (Full Features)</div>
           <div className="text-sm text-gray-600">Dashboard, Clients, Assets, Jobs, NFC, Reports</div>
         </a>
+        <a href={`/${org}/tech/login`} className="bg-white border border-gray-200 rounded p-4">
+          <div className="font-semibold">Technician Login</div>
+          <div className="text-sm text-gray-600">Sign in to your technician account</div>
+        </a>
         <div className="bg-white border border-gray-200 rounded p-4">
           <div className="text-sm text-gray-700">Direct Link</div>
           <div className="flex items-center space-x-2 mt-2">

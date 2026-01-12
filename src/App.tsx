@@ -9,6 +9,7 @@ import Technicians from './pages/Technicians';
 import TechnicianDetails from './pages/TechnicianDetails';
 import Locations from './pages/Locations';
 import TechDownload from './pages/TechDownload';
+import TechLogin from './pages/TechLogin';
 import MobileApp from './pages/MobileApp';
 import TechLayout from './layouts/TechLayout';
 import RequireTechnician from './components/RequireTechnician';
@@ -55,6 +56,7 @@ export default function App() {
         </Route>
         <Route path=":org/tech" element={<TechLayout />}>
           <Route index element={<TechDownload />} />
+          <Route path="login" element={<TechLogin />} />
           <Route element={<RequireTechnician />}>
             <Route path="app" element={<MobileApp />} />
           </Route>
