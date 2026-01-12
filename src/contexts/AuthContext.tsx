@@ -47,9 +47,7 @@ export function AuthProvider({ org, children }: { org: string; children: React.R
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser((prev) => prev ?? { id: session.user.id, email: session.user.email || '', role: 'admin' });
-      } else {
-        setUser(null);
+        setUser((prev) => (prev ? { ...prev, email: session.user.email || prev.email } : prev));
       }
     });
     return () => { try { sub?.subscription.unsubscribe(); } catch {} };
