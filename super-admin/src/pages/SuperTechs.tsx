@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase, SUPABASE_CONFIGURED, createOrgClient, DEFAULT_ORG_ID } from '../lib/supabase';
 import { restGet, restPost, restPatch, restDelete } from '../lib/rest';
 import bcrypt from 'bcryptjs';
@@ -25,7 +25,8 @@ export default function SuperTechs() {
     })();
   }, []);
   // No fetch intercept needed; REST helper handles headers explicitly.
-  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const orgSb = createOrgClient(orgId); const { data, error } = await orgSb.from('technicians').select('*').eq('org_id', orgId).order('full_name'); if (error) throw error; setRows(data||[]); } catch (e:any) { setError(e.message); } }
+  const orgSb = useMemo(()=> createOrgClient(orgId), [orgId]);
+  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const { data, error } = await orgSb.from('technicians').select('*').eq('org_id', orgId).order('full_name'); if (error) throw error; setRows(data||[]); } catch (e:any) { setError(e.message); } }
   useEffect(()=>{ load(); }, [orgId]);
   useEffect(()=>{ 
     if (!SUPABASE_CONFIGURED || !orgId) return;
@@ -38,8 +39,7 @@ export default function SuperTechs() {
     if (!orgId || !form.full_name) { setError('Select org and name'); return; }
     if (!form.temp_password) { setError('Temporary password is required'); return; }
     try {
-      const orgSb = createOrgClient(orgId);
-      const { error } = await orgSb.rpc('add_technician', {
+      const { data, error } = await orgSb.rpc('add_technician', {
         p_org_id: orgId,
         p_full_name: form.full_name,
         p_email: form.email || '',
@@ -48,6 +48,9 @@ export default function SuperTechs() {
         p_temp_password: form.temp_password
       });
       if (error) throw error;
+      if (!data) {
+        setError('Insert succeeded but no row returned. Reloading list.');
+      }
     } catch(e:any) { setError(e.message); return; }
     setForm({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
     load();
