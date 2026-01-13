@@ -8,12 +8,7 @@ export async function resolveOrgId(slug?: string): Promise<string | null> {
     const { data } = await supabase.from('organizations').select('id').eq('slug', slug).limit(1);
     if (data?.[0]?.id) return data[0].id;
   }
-
-  // 2. Check environment variable override (Dev / Force)
-  const envId = import.meta.env.VITE_DEFAULT_ORG_ID;
-  if (envId) return envId;
-
-  // 3. Try to infer slug from subdomain
+  // 2. Try to infer slug from subdomain
   // e.g. "tecniqa.vercel.app" -> "tecniqa"
   // e.g. "localhost" -> skip
   let derivedSlug: string | null = null;
@@ -38,13 +33,6 @@ export async function resolveOrgId(slug?: string): Promise<string | null> {
       const { data } = await supabase.from('organizations').select('id').eq('slug', derivedSlug).limit(1);
       if (data?.[0]?.id) return data[0].id;
     }
-  }
-
-  // 4. Fallback: Check environment variable SLUG
-  const envSlug = import.meta.env.VITE_DEFAULT_ORG_SLUG;
-  if (envSlug) {
-    const { data } = await supabase.from('organizations').select('id').eq('slug', envSlug).limit(1);
-    return data?.[0]?.id || null;
   }
 
   return null;

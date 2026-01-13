@@ -2,6 +2,7 @@ import { Outlet, useParams } from 'react-router-dom';
 import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { DataProvider } from '../contexts/DataContext';
+import { OrganizationProvider } from '../contexts/OrganizationContext';
 import { useEffect, useState } from 'react';
 import { resolveOrgId } from '../lib/org';
 import { supabaseUrl, supabaseAnonKey } from '../lib/supabase';
@@ -56,16 +57,18 @@ export default function TechLayout() {
   }, [org, attached]);
   return (
     <SettingsProvider>
-      <AuthProvider org={org || ''}>
-        <DataProvider org={org || ''}>
-          <div className="min-h-screen bg-gray-50">
-            <Header />
-            <main className="max-w-md mx-auto px-4 py-6">
-              <Outlet />
-            </main>
-          </div>
-        </DataProvider>
-      </AuthProvider>
+      <OrganizationProvider>
+        <AuthProvider org={org || ''}>
+          <DataProvider org={org || ''}>
+            <div className="min-h-screen bg-gray-50">
+              <Header />
+              <main className="max-w-md mx-auto px-4 py-6">
+                <Outlet />
+              </main>
+            </div>
+          </DataProvider>
+        </AuthProvider>
+      </OrganizationProvider>
     </SettingsProvider>
   );
 }

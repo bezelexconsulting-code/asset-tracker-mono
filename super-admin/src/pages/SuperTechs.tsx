@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, SUPABASE_CONFIGURED, createOrgClient, DEFAULT_ORG_ID } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED, createOrgClient } from '../lib/supabase';
 import { restGet, restPost, restPatch, restDelete } from '../lib/rest';
 import bcrypt from 'bcryptjs';
 
 export default function SuperTechs() {
   const [orgs, setOrgs] = useState<any[]>([]);
-  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
+  const [orgId, setOrgId] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>('');
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState<{ full_name: string; email?: string; username?: string; specialization?: string; temp_password?: string }>({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
   const [error, setError] = useState<string | null>(null);
@@ -17,11 +18,11 @@ export default function SuperTechs() {
     const qOrgId = params.get('org_id');
     const qOrgSlug = params.get('org_slug');
     (async()=>{
-      if (qOrgId) { setOrgId(qOrgId); try { localStorage.setItem('super_admin_org_id', qOrgId); } catch {} return; }
-      if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) { setOrgId(id); try { localStorage.setItem('super_admin_org_id', id); } catch {} } return; }
+      if (qOrgId) { setOrgId(qOrgId); try { localStorage.setItem('super_admin_org_id', qOrgId); } catch {} }
+      if (qOrgSlug) { setOrgSlug(qOrgSlug); }
+      if (!qOrgSlug && orgs.length>0) { setOrgSlug(orgs[0]?.slug || ''); }
       const saved = (typeof window !== 'undefined' ? localStorage.getItem('super_admin_org_id') : '') || '';
       if (saved) setOrgId(saved);
-      else if (DEFAULT_ORG_ID) setOrgId(DEFAULT_ORG_ID);
     })();
   }, []);
   // No fetch intercept needed; REST helper handles headers explicitly.
@@ -29,7 +30,7 @@ export default function SuperTechs() {
   async function load() {
     if (!SUPABASE_CONFIGURED || !orgId) return;
     try {
-      const { data, error } = await orgSb.rpc('get_technicians', { p_org_id: orgId });
+      const { data, error } = await orgSb.rpc('get_technicians_by_slug', { p_slug: orgSlug });
       if (error) throw error;
       setRows((data as any[]) || []);
     } catch (e:any) {
@@ -49,7 +50,7 @@ export default function SuperTechs() {
     if (!form.temp_password) { setError('Temporary password is required'); return; }
     try {
       const { data, error } = await orgSb.rpc('add_technician', {
-        p_org_id: orgId,
+        p_slug: orgSlug,
         p_full_name: form.full_name,
         p_email: form.email || '',
         p_username: form.username || '',
@@ -75,7 +76,7 @@ export default function SuperTechs() {
       </div>
       {!SUPABASE_CONFIGURED && (<div className="p-3 border border-yellow-200 bg-yellow-50 rounded text-sm text-yellow-800">Supabase must be configured</div>)}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <select className="border border-gray-300 rounded px-3 py-2" value={orgId} onChange={(e)=> { setOrgId(e.target.value); try { localStorage.setItem('super_admin_org_id', e.target.value); } catch {} } }>
+        <select className="border border-gray-300 rounded px-3 py-2" value={orgId} onChange={(e)=> { const id = e.target.value; setOrgId(id); try { localStorage.setItem('super_admin_org_id', id); } catch {}; const found = orgs.find(o=>o.id===id); setOrgSlug(found?.slug||''); } }>
           <option value="">Select organization</option>
           {orgs.map(o=> (<option key={o.id} value={o.id}>{o.name}</option>))}
         </select>
