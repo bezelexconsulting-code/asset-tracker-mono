@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED, createOrgClient } from '../lib/supabase';
 import { restGet, restPost, restPatch, restDelete } from '../lib/rest';
 import bcrypt from 'bcryptjs';
 
@@ -22,7 +22,7 @@ export default function SuperTechs() {
     })();
   }, []);
   // No fetch intercept needed; REST helper handles headers explicitly.
-  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const data = await restGet('technicians', orgId, '?select=*'); setRows((data||[]).sort((a:any,b:any)=> String(a.full_name||'').localeCompare(String(b.full_name||'')))); } catch (e:any) { setError(e.message); } }
+  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const orgSb = createOrgClient(orgId); const { data, error } = await orgSb.from('technicians').select('*').eq('org_id', orgId).order('full_name'); if (error) throw error; setRows(data||[]); } catch (e:any) { setError(e.message); } }
   useEffect(()=>{ load(); }, [orgId]);
   useEffect(()=>{ 
     if (!SUPABASE_CONFIGURED || !orgId) return;
@@ -36,13 +36,15 @@ export default function SuperTechs() {
     if (!form.temp_password) { setError('Temporary password is required'); return; }
     const hashed = form.temp_password ? bcrypt.hashSync(form.temp_password, 10) : null;
     try {
-      await restPost('technicians', orgId, { org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
+      const orgSb = createOrgClient(orgId);
+      const { error } = await orgSb.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
+      if (error) throw error;
     } catch(e:any) { setError(e.message); return; }
     setForm({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
     load();
   }
-  async function toggleActive(id: string, active: boolean) { try { await restPatch('technicians', orgId, `?id=eq.${id}`, { is_active: !active }); } catch(e:any) { setError(e.message); } load(); }
-  async function remove(id: string) { try { await restDelete('technicians', orgId, `?id=eq.${id}`); } catch(e:any) { setError(e.message); } load(); }
+  async function toggleActive(id: string, active: boolean) { try { const orgSb = createOrgClient(orgId); const { error } = await orgSb.from('technicians').update({ is_active: !active }).eq('id', id); if (error) throw error; } catch(e:any) { setError(e.message); } load(); }
+  async function remove(id: string) { try { const orgSb = createOrgClient(orgId); const { error } = await orgSb.from('technicians').delete().eq('id', id); if (error) throw error; } catch(e:any) { setError(e.message); } load(); }
 
   return (
     <div className="space-y-6">
