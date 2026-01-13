@@ -37,10 +37,16 @@ export default function SuperTechs() {
     setError(null);
     if (!orgId || !form.full_name) { setError('Select org and name'); return; }
     if (!form.temp_password) { setError('Temporary password is required'); return; }
-    const hashed = form.temp_password ? bcrypt.hashSync(form.temp_password, 10) : null;
     try {
       const orgSb = createOrgClient(orgId);
-      const { error } = await orgSb.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
+      const { error } = await orgSb.rpc('add_technician', {
+        p_org_id: orgId,
+        p_full_name: form.full_name,
+        p_email: form.email || '',
+        p_username: form.username || '',
+        p_specialization: form.specialization || '',
+        p_temp_password: form.temp_password
+      });
       if (error) throw error;
     } catch(e:any) { setError(e.message); return; }
     setForm({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
