@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED, supabaseUrl } from '../lib/supabase';
 import bcrypt from 'bcryptjs';
 
 export default function SuperTechs() {
@@ -20,6 +20,22 @@ export default function SuperTechs() {
       if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) setOrgId(id); }
     })();
   }, []);
+  useEffect(()=>{
+    if (!SUPABASE_CONFIGURED || !orgId) return;
+    const origFetch = window.fetch.bind(window);
+    window.fetch = (input: any, init: any = {}) => {
+      try {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (url.startsWith(`${supabaseUrl}/rest`)) {
+          const headers = { ...(init.headers || {}) } as Record<string, string>;
+          headers['app-org-id'] = orgId;
+          init.headers = headers;
+        }
+      } catch {}
+      return origFetch(input, init);
+    };
+    return ()=> { window.fetch = origFetch; };
+  }, [orgId]);
   async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name'); setRows(data||[]); }
   useEffect(()=>{ load(); }, [orgId]);
   useEffect(()=>{ 
