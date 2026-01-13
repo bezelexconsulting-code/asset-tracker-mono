@@ -262,7 +262,15 @@ export function DataProvider({ org, children }: { org: string; children: React.R
     addAsset: (a) => {
       const newAsset: Asset = { id: genId(), org_id: org, status: a.status || 'available', description: a.description || '', ...a };
       setState((s) => ({ ...s, assets: [newAsset, ...s.assets] }));
-      if (SUPABASE_CONFIGURED && orgId) { restPost('assets', orgId, { ...newAsset, org_id: orgId }).then().catch(()=>{}); }
+      if (SUPABASE_CONFIGURED) {
+        (async()=>{
+          try {
+            await supabase.rpc('add_asset_by_slug', { p_slug: org, p_asset_tag: a.asset_tag, p_name: a.name, p_status: a.status || 'available', p_client_id: a.client_id || null, p_location_id: a.location_id || null, p_description: a.description || '', p_image_url: a.image_url || null });
+            const { data } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+            setState((s)=> ({ ...s, assets: (data||[]) as any }));
+          } catch {}
+        })();
+      }
       return newAsset;
     },
     updateAsset: (id, patch) => {

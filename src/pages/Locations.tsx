@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { useOrganization } from '../contexts/OrganizationContext';
 import { MapPinIcon, BuildingOfficeIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 export default function Locations() {
   const { org } = useParams();
   const { listLocations, listClients, addLocation } = useData();
+  const { orgId } = useOrganization();
   const [locations, setLocations] = useState(listLocations());
   const [clients, setClients] = useState(listClients());
   const [showForm, setShowForm] = useState(false);
@@ -15,17 +17,16 @@ export default function Locations() {
   useEffect(() => {
     (async () => {
       if (SUPABASE_CONFIGURED) {
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
-        const { data } = await supabase.from('locations').select('*').eq('org_id', orgId).order('name');
-        setLocations((data||[]) as any);
+        if (!orgId) { setLocations([] as any); setClients([] as any); return; }
+        const { data, error } = await supabase.rpc('get_locations_by_slug', { p_slug: org });
+        if (error) { setLocations([] as any); } else { setLocations((data||[]) as any); }
         setClients([]);
       } else {
         setLocations(listLocations());
         setClients(listClients());
       }
     })();
-  }, [listLocations, listClients, org]);
+  }, [listLocations, listClients, orgId, org]);
 
   return (
     <div className="space-y-6">
@@ -64,11 +65,10 @@ export default function Locations() {
               onClick={async () => {
                 if (!form.name) return;
                 if (SUPABASE_CONFIGURED) {
-                  const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-                  const orgId = orgRow?.[0]?.id;
-                  const { data, error } = await supabase.from('locations').insert({ org_id: orgId, name: form.name, address: form.address || '' }).select('*');
+                  const { data, error } = await supabase.rpc('add_location_by_slug', { p_slug: org, p_name: form.name, p_address: form.address || '' });
                   if (error) return;
-                  setLocations([...(data||[]), ...locations]);
+                  const { data: refreshed } = await supabase.rpc('get_locations_by_slug', { p_slug: org });
+                  setLocations((refreshed||[]) as any);
                 } else {
                   const created = addLocation({ name: form.name, address: form.address, client_id: form.client_id || undefined });
                   setLocations([created, ...locations]);
