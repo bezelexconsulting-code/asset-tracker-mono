@@ -64,12 +64,10 @@ export default function AssetsList() {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
         const { data: as } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
-        const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name');
+        const { data: cats } = await supabase.rpc('get_categories_by_slug', { p_slug: org });
         const { data: cls } = await supabase.from('clients').select('id,name').eq('org_id', orgId).order('created_at', { ascending: false });
         setAssets(((as||[]) as any));
-        setCategories(cats||[]);
+        setCategories((cats||[]) as any);
         setClients((cls||[]) as any);
       } else {
         const cls = listClients();
@@ -333,7 +331,7 @@ export default function AssetsList() {
               <label className="block text-sm font-medium text-gray-700 mb-2">New Category</label>
               <div className="flex items-center space-x-2">
                 <input className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Category name" value={createForm.category_name || ''} onChange={(e)=> setCreateForm({ ...createForm, category_name: e.target.value })} />
-                <button className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors" onClick={async()=>{ if(!createForm.category_name) return; if (SUPABASE_CONFIGURED) { const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org); const orgId = orgRow?.[0]?.id; const { data } = await supabase.from('categories').insert({ org_id: orgId, name: createForm.category_name }).select('*'); setCreateForm({ ...createForm, category_id: data?.[0]?.id, category_name: '' }); const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name'); setCategories(cats||[]); } else { const cat = addCategory({ name: createForm.category_name }); setCreateForm({ ...createForm, category_id: cat.id, category_name: '' }); setCategories(listCategories()); } }}>Add</button>
+                <button className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors" onClick={async()=>{ if(!createForm.category_name) return; if (SUPABASE_CONFIGURED) { const { data } = await supabase.rpc('add_category_by_slug', { p_slug: org, p_name: createForm.category_name }); setCreateForm({ ...createForm, category_id: (data as any)?.id, category_name: '' }); const { data: cats } = await supabase.rpc('get_categories_by_slug', { p_slug: org }); setCategories((cats||[]) as any); } else { const cat = addCategory({ name: createForm.category_name }); setCreateForm({ ...createForm, category_id: cat.id, category_name: '' }); setCategories(listCategories()); } }}>Add</button>
               </div>
             </div>
             
