@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { supabaseUrl } from '../lib/supabase';
+import { supabaseUrl, DEFAULT_ORG_ID } from '../lib/supabase';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
 import Toast from '../components/Toast';
 
@@ -21,7 +21,7 @@ export default function SuperLayout() {
       try {
         const url = typeof input === 'string' ? input : (input?.url || '');
         if (url.startsWith(`${supabaseUrl}/rest`)) {
-          const oid = localStorage.getItem('super_admin_org_id') || '';
+          const oid = localStorage.getItem('super_admin_org_id') || DEFAULT_ORG_ID || '';
           if (oid) {
             if (init.headers instanceof Headers) init.headers.set('app-org-id', oid);
             else init.headers = { ...(init.headers as any), 'app-org-id': oid };

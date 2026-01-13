@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { supabase, SUPABASE_CONFIGURED, createOrgClient } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED, createOrgClient, DEFAULT_ORG_ID } from '../lib/supabase';
 import { restGet, restPost, restPatch, restDelete } from '../lib/rest';
 import bcrypt from 'bcryptjs';
 
 export default function SuperTechs() {
   const [orgs, setOrgs] = useState<any[]>([]);
-  const [orgId, setOrgId] = useState<string>('');
+  const [orgId, setOrgId] = useState<string>(DEFAULT_ORG_ID);
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState<{ full_name: string; email?: string; username?: string; specialization?: string; temp_password?: string }>({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
   const [error, setError] = useState<string | null>(null);
@@ -17,8 +17,11 @@ export default function SuperTechs() {
     const qOrgId = params.get('org_id');
     const qOrgSlug = params.get('org_slug');
     (async()=>{
-      if (qOrgId) { setOrgId(qOrgId); return; }
-      if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) setOrgId(id); }
+      if (qOrgId) { setOrgId(qOrgId); try { localStorage.setItem('super_admin_org_id', qOrgId); } catch {} return; }
+      if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) { setOrgId(id); try { localStorage.setItem('super_admin_org_id', id); } catch {} } return; }
+      const saved = (typeof window !== 'undefined' ? localStorage.getItem('super_admin_org_id') : '') || '';
+      if (saved) setOrgId(saved);
+      else if (DEFAULT_ORG_ID) setOrgId(DEFAULT_ORG_ID);
     })();
   }, []);
   // No fetch intercept needed; REST helper handles headers explicitly.
