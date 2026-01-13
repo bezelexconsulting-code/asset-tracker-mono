@@ -41,9 +41,11 @@ export default function TechLayout() {
           try {
             const url = typeof input === 'string' ? input : (input?.url || '');
             if (url.startsWith(`${supabaseUrl}/rest`)) {
-              const headers = { ...(init.headers || {}) } as Record<string, string>;
-              headers['app-org-id'] = oid;
-              init.headers = headers;
+              if (init.headers instanceof Headers) {
+                init.headers.set('app-org-id', oid);
+              } else {
+                init.headers = { ...(init.headers as any), 'app-org-id': oid };
+              }
             }
           } catch {}
           return origFetch(input, init);
