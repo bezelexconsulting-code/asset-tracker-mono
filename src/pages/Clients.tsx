@@ -43,10 +43,8 @@ export default function Clients() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
-        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-        const orgId = orgRow?.[0]?.id;
-        const { data } = await supabase.from('clients').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
-        setClients((data || []) as any);
+        const { data } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
+        setClients(((data || []) as any));
       } else {
         setClients(listClients());
       }
@@ -61,11 +59,9 @@ export default function Clients() {
       return;
     }
     if (SUPABASE_CONFIGURED) {
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
-      const { data, error: insErr } = await supabase.from('clients').insert({ org_id: orgId, name: form.name, contact_email: form.email, phone: form.phone, logo_url: form.logo_url }).select('*');
+      const { data, error: insErr } = await supabase.rpc('add_client_by_slug', { p_slug: org, p_name: form.name, p_contact_email: form.email || null, p_phone: form.phone || null, p_address: form.address || null, p_contact_person: form.contact_person || null, p_logo_url: form.logo_url || null });
       if (insErr) { setError(String(insErr.message)); return; }
-      const created = (data || [])[0];
+      const created = data as any;
       setClients([created, ...clients]);
     } else {
       const created = addClient({ name: form.name, email: form.email, phone: form.phone, address: form.address, contact_person: form.contact_person, logo_url: form.logo_url });
