@@ -374,8 +374,12 @@ export default function AssetsList() {
               {viewMode === 'grid' ? (
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <span className="text-purple-600 font-semibold text-sm">{getInitials(a.name)}</span>
+                    <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-purple-100">
+                      {a.image_url ? (
+                        <img src={a.image_url} alt="Asset" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-purple-600 font-semibold text-sm">{getInitials(a.name)}</span>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(a.status)}`}>
@@ -436,8 +440,12 @@ export default function AssetsList() {
                 </div>
               ) : (
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-purple-600 font-semibold text-sm">{getInitials(a.name)}</span>
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 bg-purple-100">
+                    {a.image_url ? (
+                      <img src={a.image_url} alt="Asset" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-purple-600 font-semibold text-sm">{getInitials(a.name)}</span>
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">

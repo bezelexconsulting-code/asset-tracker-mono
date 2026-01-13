@@ -19,8 +19,8 @@ export default function AssetDetails() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
-        const { data } = await supabase.from('assets').select('*').eq('id', id).limit(1);
-        const found = data?.[0];
+        const { data } = await supabase.rpc('get_asset_by_id_slug', { p_slug: org, p_id: id });
+        const found = data as any;
         if (found) {
           setAsset(found);
           setForm({ name: found.name || '', asset_tag: found.asset_tag || '', client_id: '', location: found.location_id || '', description: found.description || '' });
