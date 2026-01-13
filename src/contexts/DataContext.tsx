@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
 import { resolveOrgId } from '../lib/org';
+import { restGet, restPost, restPatch } from '../lib/rest';
 
 type ID = string;
 
@@ -180,23 +181,23 @@ export function DataProvider({ org, children }: { org: string; children: React.R
         if (oid) {
           // Fetch all data in parallel
           const [clients, locations, assets, technicians, jobs, activities] = await Promise.all([
-            supabase.from('clients').select('*').eq('org_id', oid),
-            supabase.from('locations').select('*').eq('org_id', oid),
-            supabase.from('assets').select('*').eq('org_id', oid),
-            supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status, username, password').eq('org_id', oid),
-            supabase.from('jobs').select('*').eq('org_id', oid),
-            supabase.from('activities').select('*').eq('org_id', oid),
+            restGet('clients', oid),
+            restGet('locations', oid),
+            restGet('assets', oid),
+            restGet('technicians', oid, '?select=*'),
+            restGet('jobs', oid),
+            restGet('activities', oid),
           ]);
           
           if (mounted) {
             setState(prev => ({
               ...prev,
-              clients: (clients.data || []) as Client[],
-              locations: (locations.data || []) as Location[],
-              assets: (assets.data || []) as Asset[],
-              technicians: (technicians.data || []).map((t: any) => ({ ...t, status: t.status ? 'active' : 'inactive' })),
-              jobs: (jobs.data || []) as Job[],
-              activities: (activities.data || []) as Activity[],
+              clients: clients as Client[],
+              locations: locations as Location[],
+              assets: assets as Asset[],
+              technicians: (technicians as any[]).map((t: any) => ({ id: t.id, name: t.full_name || t.name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : (t.status || 'active'), username: t.username, password: t.password, must_reset_password: t.must_reset_password })),
+              jobs: jobs as Job[],
+              activities: activities as Activity[],
             }));
           }
 
@@ -242,62 +243,42 @@ export function DataProvider({ org, children }: { org: string; children: React.R
     addClient: (c) => {
       const newClient: Client = { id: genId(), ...c };
       setState((s) => ({ ...s, clients: [newClient, ...s.clients] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('clients').insert({ ...newClient, org_id: orgId }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('clients', orgId, { ...newClient, org_id: orgId }).then().catch(()=>{}); }
       return newClient;
     },
     updateClient: (id, patch) => {
       setState((s) => ({ ...s, clients: s.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
-      if (SUPABASE_CONFIGURED) {
-        supabase.from('clients').update(patch).eq('id', id).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPatch('clients', orgId, `?id=eq.${id}`, patch).then().catch(()=>{}); }
     },
     listLocations: (clientId) => state.locations.filter((l) => !clientId || l.client_id === clientId),
     addLocation: (l) => {
       const newLoc: Location = { id: genId(), org_id: org, ...l }; // org_id in local obj is slug, but DB needs uuid
       const dbLoc = { ...newLoc, org_id: orgId || undefined };
       setState((s) => ({ ...s, locations: [newLoc, ...s.locations] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('locations').insert({ ...newLoc, org_id: orgId }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('locations', orgId, { ...newLoc, org_id: orgId }).then().catch(()=>{}); }
       return newLoc;
     },
     listAssets: (clientId) => clientId ? state.assets.filter((a) => a.client_id === clientId) : state.assets,
     addAsset: (a) => {
       const newAsset: Asset = { id: genId(), org_id: org, status: a.status || 'available', description: a.description || '', ...a };
       setState((s) => ({ ...s, assets: [newAsset, ...s.assets] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('assets').insert({ ...newAsset, org_id: orgId }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('assets', orgId, { ...newAsset, org_id: orgId }).then().catch(()=>{}); }
       return newAsset;
     },
     updateAsset: (id, patch) => {
       setState((s) => ({ ...s, assets: s.assets.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
-      if (SUPABASE_CONFIGURED) {
-        supabase.from('assets').update(patch).eq('id', id).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPatch('assets', orgId, `?id=eq.${id}`, patch).then().catch(()=>{}); }
     },
     listTechnicians: () => state.technicians,
     addTechnician: (t) => {
       const newTech: Technician = { id: genId(), ...t };
       setState((s) => ({ ...s, technicians: [newTech, ...s.technicians] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('technicians').insert({ 
-          id: newTech.id, 
-          org_id: orgId, 
-          full_name: newTech.name, 
-          email: newTech.email, 
-          phone: newTech.phone, 
-          specialization: newTech.specialization,
-          is_active: newTech.status === 'active'
-        }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('technicians', orgId, { id: newTech.id, org_id: orgId, full_name: newTech.name, email: newTech.email, phone: newTech.phone, specialization: newTech.specialization, is_active: newTech.status === 'active' }).then().catch(()=>{}); }
       return newTech;
     },
     updateTechnician: (id, patch) => {
       setState((s) => ({ ...s, technicians: s.technicians.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
-      if (SUPABASE_CONFIGURED) {
+      if (SUPABASE_CONFIGURED && orgId) {
         const dbPatch: any = {};
         if (patch.name) dbPatch.full_name = patch.name;
         if (patch.email !== undefined) dbPatch.email = patch.email;
@@ -306,19 +287,14 @@ export function DataProvider({ org, children }: { org: string; children: React.R
         if (patch.status) dbPatch.is_active = patch.status === 'active';
         if (patch.username !== undefined) dbPatch.username = patch.username;
         if (patch.password !== undefined) dbPatch.password = patch.password;
-        
-        if (Object.keys(dbPatch).length > 0) {
-          supabase.from('technicians').update(dbPatch).eq('id', id).then();
-        }
+        if (Object.keys(dbPatch).length > 0) { restPatch('technicians', orgId, `?id=eq.${id}`, dbPatch).then().catch(()=>{}); }
       }
     },
     listActivities: () => state.activities,
     addActivity: (a) => {
       const newAct: Activity = { id: genId(), org_id: org, created_at: new Date().toISOString(), ...a };
       setState((s) => ({ ...s, activities: [newAct, ...s.activities] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('activities').insert({ ...newAct, org_id: orgId }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('activities', orgId, { ...newAct, org_id: orgId }).then().catch(()=>{}); }
       return newAct;
     },
     listJobs: () => state.jobs,
@@ -339,16 +315,12 @@ export function DataProvider({ org, children }: { org: string; children: React.R
         ...j 
       };
       setState((s) => ({ ...s, jobs: [job, ...s.jobs] }));
-      if (SUPABASE_CONFIGURED && orgId) {
-        supabase.from('jobs').insert({ ...job, org_id: orgId }).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPost('jobs', orgId, { ...job, org_id: orgId }).then().catch(()=>{}); }
       return job;
     },
     updateJob: (id, patch) => {
       setState((s) => ({ ...s, jobs: s.jobs.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
-      if (SUPABASE_CONFIGURED) {
-        supabase.from('jobs').update(patch).eq('id', id).then();
-      }
+      if (SUPABASE_CONFIGURED && orgId) { restPatch('jobs', orgId, `?id=eq.${id}`, patch).then().catch(()=>{}); }
     },
     listCategories: () => state.categories,
     addCategory: (c) => {

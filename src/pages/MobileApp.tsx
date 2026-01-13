@@ -203,28 +203,19 @@ export default function MobileApp() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0 z-10">
-        <div className={`mx-auto ${maxW} px-6 pt-8 pb-6`}>
+        <div className={`mx-auto ${maxW} px-4 pt-6 pb-5`}>
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg overflow-hidden flex itemscenter justify-center">
-              {settings.branding.logo_url ? (
-                <img src={settings.branding.logo_url} alt="Logo" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs opacity-80">Logo</span>
-              )}
+            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src={(clients.find(c=>c.id===filterClientId)?.logo_url) || settings.branding.logo_url || '/branding/bez-logo.png'} onError={(e:any)=>{ e.currentTarget.src='/branding/bez-logo.png'; }} alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <div className="text-xl font-semibold">{settings.orgProfile.name || org}</div>
-              <div className="text-xs text-blue-100 mt-1">Welcome, {user?.name || 'Technician'} — {(clients.find(c=>c.id===filterClientId)?.name) || (settings.orgProfile.name || org)}{siteId ? `, ${sites.find(s=>s.id===siteId)?.name || ''}` : ''}</div>
+            <div className="flex-1">
+              <div className="text-lg font-semibold">{(clients.find(c=>c.id===filterClientId)?.name) || (settings.orgProfile.name || org)}</div>
+              <div className="text-[11px] text-blue-100 mt-1">Welcome, {user?.name || 'Technician'}{siteId ? ` • ${listLocations(undefined).find((s:any)=>s.id===siteId)?.name || ''}` : ''}</div>
             </div>
-            <div className="flex-1" />
-            <div className="w-40">
-              <input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search" className="w-full px-3 py-2 rounded bg-white bg-opacity-10 text-white placeholder-blue-100 text-xs border border-white/20" />
-            </div>
-            <div className="ml-3">
-              <button onClick={processQueue} className="px-3 py-2 rounded bg-white bg-opacity-10 text-white text-xs border border-white/20">
-                Sync Pending {pendingCount>0 && <span className="ml-1 inline-block px-1.5 py-0.5 rounded bg-yellow-400 text-gray-900">{pendingCount}</span>}
-              </button>
-            </div>
+            <button onClick={processQueue} className="px-3 py-2 rounded bg-white bg-opacity-10 text-white text-xs border border-white/20">Sync {pendingCount>0 && <span className="ml-1 inline-block px-1.5 py-0.5 rounded bg-yellow-400 text-gray-900">{pendingCount}</span>}</button>
+          </div>
+          <div className="mt-3">
+            <input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search assets, jobs" className="w-full px-3 py-2 rounded bg-white bg-opacity-10 text-white placeholder-blue-100 text-xs border border-white/20" />
           </div>
         </div>
       </header>
@@ -260,7 +251,7 @@ export default function MobileApp() {
               
               <div className="mt-3">
                 <label className="text-xs text-gray-600">Active client</label>
-                <select className="mt-1 border border-gray-300 rounded px-3 py-2 text-sm" value={filterClientId} onChange={e=>setFilterClientId(e.target.value)}>
+                <select className="mt-1 border border-gray-300 rounded px-3 py-2 text-sm w-full" value={filterClientId} onChange={e=>setFilterClientId(e.target.value)}>
                   <option value="">All clients</option>
                   {clients.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -286,7 +277,7 @@ export default function MobileApp() {
                     )}
                     <div className="flex items-center space-x-2 mt-2">
                       <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={()=>openJob(next.id)}>Open Job</button>
-                      <button className="px-3 py-2 rounded bg-gray-100 text-gray-700" onClick={()=>{ setFilterClientId(String(next.client_id||'')); setTab('assets'); }}>Go to Client</button>
+                      <button className="px-3 py-2 rounded bg-gray-100 text-gray-700" onClick={()=>{ setFilterClientId(String(next.client_id||'')); setTab('assets'); }}>Client Assets</button>
                       {site && (<button className="px-3 py-2 rounded bg-gray-100 text-gray-700" onClick={()=>{ setFilterClientId(String(next.client_id||'')); setSiteId(String(next.location_id||'')); setTab('assets'); }}>Go to Site</button>)}
                     </div>
                   </div>
@@ -407,10 +398,17 @@ export default function MobileApp() {
             })()}
             {clients.filter(c=> c.name.toLowerCase().includes(query.toLowerCase()) || (c.address||'').toLowerCase().includes(query.toLowerCase())).map(c => (
               <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-sm font-semibold">{c.name}</div>
-                <div className="text-xs text-blue-600"><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || '')}`} target="_blank" rel="noreferrer">{c.address || 'Open in Maps'}</a></div>
-                <div className="text-xs text-gray-600">{c.phone} • {c.email}</div>
-                <div className="mt-2"><button className="px-3 py-2 rounded bg-blue-100 text-blue-800 text-xs" onClick={()=> setFilterClientId(c.id)}>Select Client</button></div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    {c.logo_url ? (<img src={c.logo_url} alt="Logo" className="w-full h-full object-cover" />) : (<span className="text-[10px] text-gray-400">Logo</span>)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold">{c.name}</div>
+                    <div className="text-xs text-blue-600"><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address || '')}`} target="_blank" rel="noreferrer">{c.address || 'Open in Maps'}</a></div>
+                    <div className="text-xs text-gray-600">{c.phone} • {c.email}</div>
+                    <div className="mt-2"><button className="px-3 py-2 rounded bg-blue-100 text-blue-800 text-xs" onClick={()=> setFilterClientId(c.id)}>Select Client</button></div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -421,19 +419,22 @@ export default function MobileApp() {
             <AddAssetForm addAsset={(a)=>addAsset({ ...a, org_id: org!, status:'available', client_id: filterClientId || undefined, location_id: siteId || undefined, category_id: categoryId || undefined })} categories={categories} onAddCategory={(name:string)=>{ const c = addCategory({ name }); setCategoryId(c.id); }} onSelectCategory={(id:string)=> setCategoryId(id)} />
             {assets.filter(a=> (!siteId || a.location_id===siteId) && (!categoryId || a.category_id===categoryId) && ((a.name||'').toLowerCase().includes(query.toLowerCase()) || (a.asset_tag||'').toLowerCase().includes(query.toLowerCase()))).map(asset => (
               <div key={asset.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+                    <img src={asset.image_url || '/branding/asset-placeholder.png'} onError={(e:any)=>{ e.currentTarget.src='/branding/asset-placeholder.png'; }} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
                     <div className="text-sm font-semibold">{asset.name}</div>
                     <div className="text-xs text-gray-600">{asset.asset_tag}</div>
                     {asset.category_id && (<div className="text-xs text-gray-500">{categories.find(c=>c.id===asset.category_id)?.name}</div>)}
                   </div>
-                  <div className="text-xs text-gray-600">{asset.status}</div>
+                  <span className={`text-[11px] px-2 py-1 rounded ${asset.status==='available'?'bg-green-100 text-green-800':asset.status==='checked_out'?'bg-yellow-100 text-yellow-800':asset.status==='maintenance'?'bg-orange-100 text-orange-800':'bg-gray-100 text-gray-800'}`}>{asset.status}</span>
                 </div>
-                <div className="mt-2 flex items-center space-x-2">
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'checked_out' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_out', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-1 rounded bg-gray-100 text-xs">Check-out</button>
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'available' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_in', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-1 rounded bg-gray-100 text-xs">Check-in</button>
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'maintenance' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'maintenance', status:'open', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-1 rounded bg-orange-100 text-orange-800 text-xs">Maintenance</button>
-                  <button onClick={()=>{ setAssetEditId(asset.id); setEditForm({ name: asset.name, asset_tag: asset.asset_tag, image_url: asset.image_url || '', category_id: asset.category_id || '' }); }} className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">Edit</button>
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'checked_out' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_out', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-gray-100 text-xs">Check-out</button>
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'available' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_in', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-gray-100 text-xs">Check-in</button>
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'maintenance' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'maintenance', status:'open', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-orange-100 text-orange-800 text-xs">Maintenance</button>
+                  <button onClick={()=>{ setAssetEditId(asset.id); setEditForm({ name: asset.name, asset_tag: asset.asset_tag, image_url: asset.image_url || '', category_id: asset.category_id || '' }); }} className="px-2 py-2 rounded bg-blue-100 text-blue-800 text-xs">Edit</button>
                 </div>
                 <div className="mt-2 flex items-center space-x-2 text-xs">
                   <span className="text-gray-500">Condition:</span>
