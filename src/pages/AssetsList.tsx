@@ -63,12 +63,12 @@ export default function AssetsList() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
+        const { data: as } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
         const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
         const orgId = orgRow?.[0]?.id;
-        const { data: as } = await supabase.from('assets').select('*').eq('org_id', orgId).order('created_at', { ascending: false });
         const { data: cats } = await supabase.from('categories').select('*').eq('org_id', orgId).order('name');
         const { data: cls } = await supabase.from('clients').select('id,name').eq('org_id', orgId).order('created_at', { ascending: false });
-        setAssets((as||[]) as any);
+        setAssets(((as||[]) as any));
         setCategories(cats||[]);
         setClients((cls||[]) as any);
       } else {
@@ -352,11 +352,10 @@ export default function AssetsList() {
                 let imgUrl = createForm.image_url || '';
                 if (imgUrl) { imgUrl = await watermarkImage(imgUrl, `${new Date().toLocaleString()} • ${createForm.asset_tag || createForm.name}`); }
                 if (SUPABASE_CONFIGURED) {
-                  const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-                  const orgId = orgRow?.[0]?.id;
-                  const { data, error } = await supabase.from('assets').insert({ org_id: orgId, asset_tag: createForm.asset_tag, name: createForm.name, client_id: createForm.client_id || null, location_id: createForm.location_id || null, category_id: createForm.category_id || null, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || null }).select('*');
+                  const { error } = await supabase.rpc('add_asset_by_slug', { p_slug: org, p_asset_tag: createForm.asset_tag, p_name: createForm.name, p_status: createForm.status || 'available', p_client_id: createForm.client_id || null, p_location_id: createForm.location_id || null, p_category_id: createForm.category_id || null, p_description: createForm.description || '', p_image_url: imgUrl || null } as any);
                   if (error) { setError(String(error.message)); return; }
-                  setAssets([...(data||[]), ...assets]);
+                  const { data: refreshed } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+                  setAssets(((refreshed||[]) as any));
                 } else {
                   const created = addAsset({ asset_tag: createForm.asset_tag, name: createForm.name, client_id: createForm.client_id || undefined, location_id: createForm.location_id || undefined, category_id: createForm.category_id || undefined, status: createForm.status || 'available', description: createForm.description || '', image_url: imgUrl || undefined });
                   setAssets([created, ...assets]);
