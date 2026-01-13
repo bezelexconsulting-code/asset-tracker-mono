@@ -170,29 +170,14 @@ export default function Dashboard() {
     if (!SUPABASE_CONFIGURED) return;
     (async () => {
       if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
-      // Fetch assets count
-      const { count: assetsCount } = await supabase
-        .from('assets')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', orgId);
-
-      // Fetch checked out count
-      const { count: checkedCount } = await supabase
-        .from('assets')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'checked_out');
-      let techsCount = 0;
-      try {
-        const { count } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-        techsCount = count || 0;
-      } catch {}
-      try {
-        const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
-        techsCount = Array.isArray(data) ? data.length : techsCount;
-      } catch {}
-      const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-      setCounts({ assets: assetsCount || 0, checked: checkedCount || 0, clients: clientsCount || 0, techs: techsCount || 0 });
+      const { data: assetsBySlug } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+      const assetsCount = Array.isArray(assetsBySlug) ? assetsBySlug.length : 0;
+      const checkedCount = Array.isArray(assetsBySlug) ? assetsBySlug.filter((a:any)=> a.status==='checked_out').length : 0;
+      const { data: techsBySlug } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+      const techsCount = Array.isArray(techsBySlug) ? techsBySlug.length : 0;
+      const { data: clientsBySlug } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
+      const clientsCount = Array.isArray(clientsBySlug) ? clientsBySlug.length : 0;
+      setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
       const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
     })();
@@ -204,14 +189,12 @@ export default function Dashboard() {
         setCounts((c)=> ({ ...c, assets: assetsCount || 0, checked: checkedCount || 0 }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
-        if (!orgId) return;
-        const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-        setCounts((c)=> ({ ...c, techs: techsCount || 0 }));
+        const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+        setCounts((c)=> ({ ...c, techs: Array.isArray(data) ? data.length : c.techs }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
-        if (!orgId) return;
-        const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
-        setCounts((c)=> ({ ...c, clients: clientsCount || 0 }));
+        const { data } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
+        setCounts((c)=> ({ ...c, clients: Array.isArray(data) ? data.length : c.clients }));
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, async ()=>{
         if (!orgId) return;
