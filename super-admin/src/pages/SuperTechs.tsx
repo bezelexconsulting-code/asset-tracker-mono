@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase, SUPABASE_CONFIGURED, supabaseUrl } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { restGet, restPost, restPatch, restDelete } from '../lib/rest';
 import bcrypt from 'bcryptjs';
 
 export default function SuperTechs() {
@@ -20,25 +21,8 @@ export default function SuperTechs() {
       if (qOrgSlug) { const { data } = await supabase.from('organizations').select('id').eq('slug', qOrgSlug).limit(1); const id = data?.[0]?.id; if (id) setOrgId(id); }
     })();
   }, []);
-  useEffect(()=>{
-    if (!SUPABASE_CONFIGURED || !orgId) return;
-    const origFetch = window.fetch.bind(window);
-    window.fetch = (input: any, init: any = {}) => {
-      try {
-        const url = typeof input === 'string' ? input : (input?.url || '');
-        if (url.startsWith(`${supabaseUrl}/rest`)) {
-          if (init.headers instanceof Headers) {
-            init.headers.set('app-org-id', orgId);
-          } else {
-            init.headers = { ...(init.headers as any), 'app-org-id': orgId };
-          }
-        }
-      } catch {}
-      return origFetch(input, init);
-    };
-    return ()=> { window.fetch = origFetch; };
-  }, [orgId]);
-  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; const { data } = await supabase.from('technicians').select('*').eq('org_id', orgId).order('full_name'); setRows(data||[]); }
+  // No fetch intercept needed; REST helper handles headers explicitly.
+  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const data = await restGet('technicians', orgId, '?select=*'); setRows((data||[]).sort((a:any,b:any)=> String(a.full_name||'').localeCompare(String(b.full_name||'')))); } catch (e:any) { setError(e.message); } }
   useEffect(()=>{ load(); }, [orgId]);
   useEffect(()=>{ 
     if (!SUPABASE_CONFIGURED || !orgId) return;
@@ -51,13 +35,14 @@ export default function SuperTechs() {
     if (!orgId || !form.full_name) { setError('Select org and name'); return; }
     if (!form.temp_password) { setError('Temporary password is required'); return; }
     const hashed = form.temp_password ? bcrypt.hashSync(form.temp_password, 10) : null;
-    const { error: err } = await supabase.from('technicians').insert({ org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
-    if (err) { setError(err.message); return; }
+    try {
+      await restPost('technicians', orgId, { org_id: orgId, full_name: form.full_name, email: form.email||'', username: form.username||'', specialization: form.specialization||'', is_active: true, password: '', hashed_password: hashed, must_reset_password: !!hashed });
+    } catch(e:any) { setError(e.message); return; }
     setForm({ full_name: '', email: '', username: '', specialization: '', temp_password: '' });
     load();
   }
-  async function toggleActive(id: string, active: boolean) { await supabase.from('technicians').update({ is_active: !active }).eq('id', id); load(); }
-  async function remove(id: string) { await supabase.from('technicians').delete().eq('id', id); load(); }
+  async function toggleActive(id: string, active: boolean) { try { await restPatch('technicians', orgId, `?id=eq.${id}`, { is_active: !active }); } catch(e:any) { setError(e.message); } load(); }
+  async function remove(id: string) { try { await restDelete('technicians', orgId, `?id=eq.${id}`); } catch(e:any) { setError(e.message); } load(); }
 
   return (
     <div className="space-y-6">
