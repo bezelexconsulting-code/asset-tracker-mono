@@ -172,14 +172,28 @@ export default function Dashboard() {
       if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
       const { data: assetsBySlug } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
       const localAssets = listAssets(undefined) || [];
-      const assetsCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.length : localAssets.length;
-      const checkedCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.filter((a:any)=> a.status==='checked_out').length : localAssets.filter((a:any)=> a.status==='checked_out').length;
+      let assetsCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.length : localAssets.length;
+      let checkedCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.filter((a:any)=> a.status==='checked_out').length : localAssets.filter((a:any)=> a.status==='checked_out').length;
+      if (assetsCount === 0) {
+        const { count } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        assetsCount = count || 0;
+        const { count: checked } = await supabase.from('assets').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'checked_out');
+        checkedCount = checked || 0;
+      }
       const { data: techsBySlug } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
       const localTechs = listTechnicians() || [];
-      const techsCount = Array.isArray(techsBySlug) && techsBySlug.length>0 ? techsBySlug.length : localTechs.length;
+      let techsCount = Array.isArray(techsBySlug) && techsBySlug.length>0 ? techsBySlug.length : localTechs.length;
+      if (techsCount === 0) {
+        const { count } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        techsCount = count || 0;
+      }
       const { data: clientsBySlug } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
       const localClients = listClients() || [];
-      const clientsCount = Array.isArray(clientsBySlug) && clientsBySlug.length>0 ? clientsBySlug.length : localClients.length;
+      let clientsCount = Array.isArray(clientsBySlug) && clientsBySlug.length>0 ? clientsBySlug.length : localClients.length;
+      if (clientsCount === 0) {
+        const { count } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        clientsCount = count || 0;
+      }
       setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
       const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
