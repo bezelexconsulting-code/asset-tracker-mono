@@ -171,12 +171,15 @@ export default function Dashboard() {
     (async () => {
       if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
       const { data: assetsBySlug } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
-      const assetsCount = Array.isArray(assetsBySlug) ? assetsBySlug.length : 0;
-      const checkedCount = Array.isArray(assetsBySlug) ? assetsBySlug.filter((a:any)=> a.status==='checked_out').length : 0;
+      const localAssets = listAssets(undefined) || [];
+      const assetsCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.length : localAssets.length;
+      const checkedCount = Array.isArray(assetsBySlug) && assetsBySlug.length>0 ? assetsBySlug.filter((a:any)=> a.status==='checked_out').length : localAssets.filter((a:any)=> a.status==='checked_out').length;
       const { data: techsBySlug } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
-      const techsCount = Array.isArray(techsBySlug) ? techsBySlug.length : 0;
+      const localTechs = listTechnicians() || [];
+      const techsCount = Array.isArray(techsBySlug) && techsBySlug.length>0 ? techsBySlug.length : localTechs.length;
       const { data: clientsBySlug } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
-      const clientsCount = Array.isArray(clientsBySlug) ? clientsBySlug.length : 0;
+      const localClients = listClients() || [];
+      const clientsCount = Array.isArray(clientsBySlug) && clientsBySlug.length>0 ? clientsBySlug.length : localClients.length;
       setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
       const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
