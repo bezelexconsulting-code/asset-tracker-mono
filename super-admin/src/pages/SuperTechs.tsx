@@ -26,7 +26,16 @@ export default function SuperTechs() {
   }, []);
   // No fetch intercept needed; REST helper handles headers explicitly.
   const orgSb = useMemo(()=> createOrgClient(orgId), [orgId]);
-  async function load() { if (!SUPABASE_CONFIGURED || !orgId) return; try { const { data, error } = await orgSb.from('technicians').select('*').eq('org_id', orgId).order('full_name'); if (error) throw error; setRows(data||[]); } catch (e:any) { setError(e.message); } }
+  async function load() {
+    if (!SUPABASE_CONFIGURED || !orgId) return;
+    try {
+      const { data, error } = await orgSb.rpc('get_technicians', { p_org_id: orgId });
+      if (error) throw error;
+      setRows((data as any[]) || []);
+    } catch (e:any) {
+      setError(e.message);
+    }
+  }
   useEffect(()=>{ load(); }, [orgId]);
   useEffect(()=>{ 
     if (!SUPABASE_CONFIGURED || !orgId) return;
@@ -60,7 +69,10 @@ export default function SuperTechs() {
 
   return (
     <div className="space-y-6">
-      <div className="text-lg font-semibold">Technicians</div>
+      <div className="flex items-center justify-between">
+        <div className="text-lg font-semibold">Technicians</div>
+        {orgId && (<div className="text-xs text-gray-600">Active Org: <span className="font-mono">{orgId}</span></div>)}
+      </div>
       {!SUPABASE_CONFIGURED && (<div className="p-3 border border-yellow-200 bg-yellow-50 rounded text-sm text-yellow-800">Supabase must be configured</div>)}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <select className="border border-gray-300 rounded px-3 py-2" value={orgId} onChange={(e)=> { setOrgId(e.target.value); try { localStorage.setItem('super_admin_org_id', e.target.value); } catch {} } }>
