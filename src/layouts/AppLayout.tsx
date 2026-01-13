@@ -3,6 +3,7 @@ import { NavLink, Outlet, useParams, useLocation } from 'react-router-dom';
 import { DataProvider } from '../contexts/DataContext';
 import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { OrganizationProvider } from '../contexts/OrganizationContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 export default function AppLayout() {
@@ -106,29 +107,31 @@ export default function AppLayout() {
   const isTechRoute = segs[1] === 'tech';
   return (
     <SettingsProvider org={org || 'demo-org'}>
-      <AuthProvider org={org || 'demo-org'}>
-        <DataProvider org={org || 'demo-org'}>
-          <div className="min-h-screen bg-gray-50">
-            {!isLoginRoute && <BrandHeader org={org} />}
-            {isLoginRoute ? (
-              <main className="max-w-md mx-auto px-4 py-10">
-                <Outlet />
-              </main>
-            ) : (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
-                {isTechRoute ? null : (
-                  <aside className="col-span-12 lg:col-span-3">
-                    <SidebarNav nav={nav} />
-                  </aside>
-                )}
-                <main className="col-span-12 lg:col-span-9">
+      <OrganizationProvider>
+        <AuthProvider org={org || 'demo-org'}>
+          <DataProvider org={org || 'demo-org'}>
+            <div className="min-h-screen bg-gray-50">
+              {!isLoginRoute && <BrandHeader org={org} />}
+              {isLoginRoute ? (
+                <main className="max-w-md mx-auto px-4 py-10">
                   <Outlet />
                 </main>
-              </div>
-            )}
-          </div>
-        </DataProvider>
-      </AuthProvider>
+              ) : (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
+                  {isTechRoute ? null : (
+                    <aside className="col-span-12 lg:col-span-3">
+                      <SidebarNav nav={nav} />
+                    </aside>
+                  )}
+                  <main className="col-span-12 lg:col-span-9">
+                    <Outlet />
+                  </main>
+                </div>
+              )}
+            </div>
+          </DataProvider>
+        </AuthProvider>
+      </OrganizationProvider>
     </SettingsProvider>
   );
 }
