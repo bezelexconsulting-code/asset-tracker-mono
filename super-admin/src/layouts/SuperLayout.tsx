@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { supabaseUrl } from '../lib/supabase';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
 import Toast from '../components/Toast';
 
@@ -13,6 +15,23 @@ export default function SuperLayout() {
   ];
   const isLogin = useLocation().pathname.toLowerCase().includes('/super/login');
   const { notify, clearNotify } = useSuperAdmin() as any;
+  useEffect(()=>{
+    const origFetch = window.fetch.bind(window);
+    window.fetch = (input: any, init: any = {}) => {
+      try {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (url.startsWith(`${supabaseUrl}/rest`)) {
+          const oid = localStorage.getItem('super_admin_org_id') || '';
+          if (oid) {
+            if (init.headers instanceof Headers) init.headers.set('app-org-id', oid);
+            else init.headers = { ...(init.headers as any), 'app-org-id': oid };
+          }
+        }
+      } catch {}
+      return origFetch(input, init);
+    };
+    return ()=> { window.fetch = origFetch; };
+  }, []);
   return (
     <div className="min-h-screen bg-gray-50">
       {isLogin ? (

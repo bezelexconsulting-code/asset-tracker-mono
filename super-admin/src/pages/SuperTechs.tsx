@@ -51,7 +51,7 @@ export default function SuperTechs() {
       <div className="text-lg font-semibold">Technicians</div>
       {!SUPABASE_CONFIGURED && (<div className="p-3 border border-yellow-200 bg-yellow-50 rounded text-sm text-yellow-800">Supabase must be configured</div>)}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <select className="border border-gray-300 rounded px-3 py-2" value={orgId} onChange={(e)=> setOrgId(e.target.value)}>
+        <select className="border border-gray-300 rounded px-3 py-2" value={orgId} onChange={(e)=> { setOrgId(e.target.value); try { localStorage.setItem('super_admin_org_id', e.target.value); } catch {} } }>
           <option value="">Select organization</option>
           {orgs.map(o=> (<option key={o.id} value={o.id}>{o.name}</option>))}
         </select>
