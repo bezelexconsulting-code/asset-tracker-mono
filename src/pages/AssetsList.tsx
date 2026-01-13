@@ -65,10 +65,10 @@ export default function AssetsList() {
       if (SUPABASE_CONFIGURED) {
         const { data: as } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
         const { data: cats } = await supabase.rpc('get_categories_by_slug', { p_slug: org });
-        const { data: cls } = await supabase.from('clients').select('id,name').eq('org_id', orgId).order('created_at', { ascending: false });
+        const { data: cls } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
         setAssets(((as||[]) as any));
         setCategories((cats||[]) as any);
-        setClients((cls||[]) as any);
+        setClients(((cls||[]) as any));
       } else {
         const cls = listClients();
         setClients(cls);
