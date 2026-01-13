@@ -182,7 +182,15 @@ export default function Dashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('org_id', orgId)
         .eq('status', 'checked_out');
-      const { count: techsCount } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+      let techsCount = 0;
+      try {
+        const { count } = await supabase.from('technicians').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
+        techsCount = count || 0;
+      } catch {}
+      try {
+        const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+        techsCount = Array.isArray(data) ? data.length : techsCount;
+      } catch {}
       const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('org_id', orgId);
       setCounts({ assets: assetsCount || 0, checked: checkedCount || 0, clients: clientsCount || 0, techs: techsCount || 0 });
       const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);

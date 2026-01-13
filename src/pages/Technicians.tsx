@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
-import { resolveOrgId } from '../lib/org';
+import { useOrganization } from '../contexts/OrganizationContext';
 import { useData } from '../contexts/DataContext';
 import { UserIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
@@ -16,6 +16,7 @@ interface Technician {
 
 export default function Technicians() {
   const { org } = useParams();
+  const { orgId } = useOrganization();
   const { listTechnicians, state, listClients, addJob, listAssets, listLocations, addAsset } = useData() as any;
   const [techs, setTechs] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,14 +30,14 @@ export default function Technicians() {
     (async () => {
       setLoading(true);
       if (SUPABASE_CONFIGURED) {
-        const orgId = await resolveOrgId(org);
         if (!orgId) { setError('Organization not found'); setTechs([]); setLoading(false); return; }
-        const { data } = await supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status').eq('org_id', orgId).order('full_name');
-        setTechs((data||[]) as any);
+        const { data, error } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+        if (error) { setError(error.message); setTechs([]); setLoading(false); return; }
+        setTechs(((data||[]) as any).map((t:any)=> ({ id: t.id, name: t.full_name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : 'inactive' })));
         const ch = supabase.channel(`techs_${orgId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians', filter: `org_id=eq.${orgId}` }, async ()=>{
-            const { data } = await supabase.from('technicians').select('id, full_name as name, email, phone, specialization, is_active as status').eq('org_id', orgId).order('full_name');
-            setTechs((data||[]) as any);
+            const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+            setTechs(((data||[]) as any).map((t:any)=> ({ id: t.id, name: t.full_name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : 'inactive' })));
           })
           .subscribe();
       } else {
@@ -44,7 +45,7 @@ export default function Technicians() {
       }
       setLoading(false);
     })();
-  }, [listTechnicians, org]);
+  }, [listTechnicians, orgId, org]);
 
   return (
     <div className="space-y-6">
