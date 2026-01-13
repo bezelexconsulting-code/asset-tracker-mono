@@ -273,7 +273,16 @@ export function DataProvider({ org, children }: { org: string; children: React.R
     addTechnician: (t) => {
       const newTech: Technician = { id: genId(), ...t };
       setState((s) => ({ ...s, technicians: [newTech, ...s.technicians] }));
-      if (SUPABASE_CONFIGURED) { supabase.rpc('add_technician_by_slug', { p_slug: org, p_full_name: newTech.name, p_email: newTech.email || '', p_username: newTech.username || '', p_specialization: newTech.specialization || '', p_temp_password: newTech.password || '' }).then().catch(()=>{}); }
+      if (SUPABASE_CONFIGURED) {
+        (async()=>{
+          try {
+            await supabase.rpc('add_technician_by_slug', { p_slug: org, p_full_name: newTech.name, p_email: newTech.email || '', p_username: newTech.username || '', p_specialization: newTech.specialization || '', p_temp_password: newTech.password || '' });
+            const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+            const normalized = ((data as any[])||[]).map((t: any) => ({ id: t.id, name: t.full_name || t.name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : (t.status || 'active'), username: t.username, password: t.password, must_reset_password: t.must_reset_password }));
+            setState((s)=> ({ ...s, technicians: normalized }));
+          } catch {}
+        })();
+      }
       return newTech;
     },
     updateTechnician: (id, patch) => {
