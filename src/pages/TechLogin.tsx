@@ -16,10 +16,7 @@ export default function TechLogin() {
     e.preventDefault();
     setError(null);
     if (!SUPABASE_CONFIGURED) { setError('Supabase not configured'); return; }
-    const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-    const orgId = orgRow?.[0]?.id;
-    if (!orgId) { setError('Organization not found'); return; }
-    const { data: techs } = await supabase.from('technicians').select('*').eq('org_id', orgId);
+    const { data: techs } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
     const t = (techs || []).find((x:any)=> (x.username === username || x.email === username));
     if (!t) { setError('Invalid credentials'); return; }
     const ok = t.hashed_password ? bcrypt.compareSync(password, t.hashed_password) : (!!t.password && password === t.password);
@@ -48,4 +45,3 @@ export default function TechLogin() {
     </div>
   );
 }
-

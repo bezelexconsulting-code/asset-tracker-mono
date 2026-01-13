@@ -6,7 +6,33 @@
     <title>Asset Tracker</title>
     <link rel="icon" href="/branding/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/branding/applefavicon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" id="pwa-manifest" href="/manifest.webmanifest" />
+    <script>
+      (function(){
+        try {
+          var path = location.pathname.split('/').filter(Boolean);
+          var slug = path[0] || '';
+          if (!slug) return;
+          var manifest = {
+            name: 'BezAssetTracker',
+            short_name: 'AssetTracker',
+            start_url: '/' + slug + '/tech/login',
+            scope: '/' + slug + '/',
+            display: 'standalone',
+            background_color: '#ffffff',
+            theme_color: '#0ea5e9',
+            icons: [
+              { src: '/branding/applefavicon.png', sizes: '192x192', type: 'image/png' },
+              { src: '/branding/favicon.png', sizes: '512x512', type: 'image/png' }
+            ]
+          };
+          var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+          var url = URL.createObjectURL(blob);
+          var link = document.getElementById('pwa-manifest');
+          if (link) link.setAttribute('href', url);
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

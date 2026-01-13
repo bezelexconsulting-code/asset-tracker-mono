@@ -184,7 +184,7 @@ export function DataProvider({ org, children }: { org: string; children: React.R
             restGet('clients', oid),
             restGet('locations', oid),
             restGet('assets', oid),
-            restGet('technicians', oid, '?select=*'),
+            (await supabase.rpc('get_technicians_by_slug', { p_slug: org })).data || [],
             restGet('jobs', oid),
             restGet('activities', oid),
           ]);
@@ -273,7 +273,7 @@ export function DataProvider({ org, children }: { org: string; children: React.R
     addTechnician: (t) => {
       const newTech: Technician = { id: genId(), ...t };
       setState((s) => ({ ...s, technicians: [newTech, ...s.technicians] }));
-      if (SUPABASE_CONFIGURED && orgId) { restPost('technicians', orgId, { id: newTech.id, org_id: orgId, full_name: newTech.name, email: newTech.email, phone: newTech.phone, specialization: newTech.specialization, is_active: newTech.status === 'active' }).then().catch(()=>{}); }
+      if (SUPABASE_CONFIGURED) { supabase.rpc('add_technician_by_slug', { p_slug: org, p_full_name: newTech.name, p_email: newTech.email || '', p_username: newTech.username || '', p_specialization: newTech.specialization || '', p_temp_password: newTech.password || '' }).then().catch(()=>{}); }
       return newTech;
     },
     updateTechnician: (id, patch) => {
