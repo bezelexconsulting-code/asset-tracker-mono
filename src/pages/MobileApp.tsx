@@ -234,7 +234,7 @@ export default function MobileApp() {
         )}
         {tab==='dashboard' && (
           <>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <div className="text-xs text-gray-500">Today Scans</div>
@@ -251,14 +251,14 @@ export default function MobileApp() {
               
               <div className="mt-3">
                 <label className="text-xs text-gray-600">Active client</label>
-                <select className="mt-1 border border-gray-300 rounded px-3 py-2 text-sm w-full" value={filterClientId} onChange={e=>setFilterClientId(e.target.value)}>
+                <select className="mt-1 border border-gray-300 rounded-xl px-4 py-3 text-sm w-full" value={filterClientId} onChange={e=>setFilterClientId(e.target.value)}>
                   <option value="">All clients</option>
                   {clients.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="text-sm font-semibold">Next Job</div>
               {(() => {
                 const next = jobs.find(j=>j.status!=='completed');
@@ -284,49 +284,50 @@ export default function MobileApp() {
                 );
               })()}
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="text-sm font-semibold mb-3">Quick Actions</div>
-              <div className="grid grid-cols-2 gap-3">
-                <button className="p-4 rounded-xl border border-gray-200 text-left active:scale-98" onClick={()=>setTab('assets')}>
-                  <div className="text-lg">📦</div>
-                  <div className="text-sm font-medium mt-1">Add Asset</div>
-                  <div className="text-xs text-gray-600">Create asset and upload photo</div>
+              <div className="grid grid-cols-2 gap-4">
+                <button className="p-6 rounded-2xl border border-gray-200 text-left active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('assets')}>
+                  <div className="text-2xl">📦</div>
+                  <div className="text-base font-medium mt-2">Add Asset</div>
+                  <div className="text-xs text-gray-600 mt-1">Create asset and upload photo</div>
                 </button>
-                <button className="p-4 rounded-xl border border-gray-200 text-left active:scale-98" onClick={()=>setTab('nfc')}>
-                  <div className="text-lg">🔍</div>
-                  <div className="text-sm font-medium mt-1">Bind Tag</div>
-                  <div className="text-xs text-gray-600">Write/scan tag to open asset</div>
+                <button className="p-6 rounded-2xl border border-gray-200 text-left active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('nfc')}>
+                  <div className="text-2xl">🔍</div>
+                  <div className="text-base font-medium mt-2">Bind Tag</div>
+                  <div className="text-xs text-gray-600 mt-1">Write/scan tag to open asset</div>
                 </button>
-                <button className="p-4 rounded-xl border border-gray-200 text-left active:scale-98" onClick={()=>setTab('jobs')}>
-                  <div className="text-lg">📝</div>
-                  <div className="text-sm font-medium mt-1">View Jobs</div>
-                  <div className="text-xs text-gray-600">Open assigned tasks</div>
+                <button className="p-6 rounded-2xl border border-gray-200 text-left active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('jobs')}>
+                  <div className="text-2xl">📝</div>
+                  <div className="text-base font-medium mt-2">View Jobs</div>
+                  <div className="text-xs text-gray-600 mt-1">Open assigned tasks</div>
                 </button>
-                <button className="p-4 rounded-xl border border-gray-200 text-left active:scale-98" onClick={()=>setTab('reports')}>
-                  <div className="text-lg">📅</div>
-                  <div className="text-sm font-medium mt-1">Export Day</div>
-                  <div className="text-xs text-gray-600">CSV or PDF report</div>
+                <button className="p-6 rounded-2xl border border-gray-200 text-left active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('reports')}>
+                  <div className="text-2xl">📅</div>
+                  <div className="text-base font-medium mt-2">Export Day</div>
+                  <div className="text-xs text-gray-600 mt-1">CSV or PDF report</div>
                 </button>
             </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="text-sm font-semibold mb-3">Getting Started</div>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <button className="p-4 rounded-xl border border-gray-200 active:scale-98" onClick={()=>setTab('assets')}>
-                  <div className="text-lg">1️⃣</div>
-                  <div className="text-xs mt-1">Add Asset</div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <button className="p-6 rounded-2xl border border-gray-200 active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('assets')}>
+                  <div className="text-2xl">1️⃣</div>
+                  <div className="text-sm mt-2 font-medium">Add Asset</div>
                 </button>
-                <button className="p-4 rounded-xl border border-gray-200 active:scale-98" onClick={()=>setTab('nfc')}>
-                  <div className="text-lg">2️⃣</div>
-                  <div className="text-xs mt-1">Bind Tag</div>
+                <button className="p-6 rounded-2xl border border-gray-200 active:scale-[0.98] transition-transform shadow-sm" onClick={()=>setTab('nfc')}>
+                  <div className="text-2xl">2️⃣</div>
+                  <div className="text-sm mt-2 font-medium">Bind Tag</div>
                 </button>
-                <button className="p-4 rounded-xl border border-gray-200 active:scale-98" onClick={()=>setTab('nfc')}>
-                  <div className="text-lg">3️⃣</div>
-                  <div className="text-xs mt-1">Tap Tag</div>
+                <button className="p-6 rounded-2xl border border-gray-200 active:scale-[0.98] transition-transform shadow-sm relative" onClick={()=>setTab('nfc')}>
+                  <div className="absolute inset-0 rounded-2xl bg-blue-500 opacity-20 animate-pulse"></div>
+                  <div className="text-2xl relative z-10">3️⃣</div>
+                  <div className="text-sm mt-2 font-medium relative z-10">Tap Tag</div>
                 </button>
               </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="text-sm font-semibold">Recent Activity</div>
               <div className="mt-3 space-y-2">
                 {activities.slice(0,5).map(a => (
@@ -397,7 +398,7 @@ export default function MobileApp() {
               );
             })()}
             {clients.filter(c=> c.name.toLowerCase().includes(query.toLowerCase()) || (c.address||'').toLowerCase().includes(query.toLowerCase())).map(c => (
-              <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4">
+              <div key={c.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm active:scale-[0.98] transition-transform">
                 <div className="flex items-start space-x-3">
                   <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                     {c.logo_url ? (<img src={c.logo_url} alt="Logo" className="w-full h-full object-cover" />) : (<span className="text-[10px] text-gray-400">Logo</span>)}
@@ -418,7 +419,7 @@ export default function MobileApp() {
           <div className="space-y-4">
             <AddAssetForm addAsset={(a)=>addAsset({ ...a, org_id: org!, status:'available', client_id: filterClientId || undefined, location_id: siteId || undefined, category_id: categoryId || undefined })} categories={categories} onAddCategory={(name:string)=>{ const c = addCategory({ name }); setCategoryId(c.id); }} onSelectCategory={(id:string)=> setCategoryId(id)} />
             {assets.filter(a=> (!siteId || a.location_id===siteId) && (!categoryId || a.category_id===categoryId) && ((a.name||'').toLowerCase().includes(query.toLowerCase()) || (a.asset_tag||'').toLowerCase().includes(query.toLowerCase()))).map(asset => (
-              <div key={asset.id} className="bg-white border border-gray-200 rounded-xl p-4">
+              <div key={asset.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
                     <img src={asset.image_url || '/branding/asset-placeholder.png'} onError={(e:any)=>{ e.currentTarget.src='/branding/asset-placeholder.png'; }} alt="" className="w-full h-full object-cover" />
@@ -430,11 +431,11 @@ export default function MobileApp() {
                   </div>
                   <span className={`text-[11px] px-2 py-1 rounded ${asset.status==='available'?'bg-green-100 text-green-800':asset.status==='checked_out'?'bg-yellow-100 text-yellow-800':asset.status==='maintenance'?'bg-orange-100 text-orange-800':'bg-gray-100 text-gray-800'}`}>{asset.status}</span>
                 </div>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'checked_out' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_out', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-gray-100 text-xs">Check-out</button>
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'available' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_in', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-gray-100 text-xs">Check-in</button>
-                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'maintenance' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'maintenance', status:'open', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-2 py-2 rounded bg-orange-100 text-orange-800 text-xs">Maintenance</button>
-                  <button onClick={()=>{ setAssetEditId(asset.id); setEditForm({ name: asset.name, asset_tag: asset.asset_tag, image_url: asset.image_url || '', category_id: asset.category_id || '' }); }} className="px-2 py-2 rounded bg-blue-100 text-blue-800 text-xs">Edit</button>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'checked_out' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_out', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-4 py-4 rounded-2xl bg-gray-100 text-sm font-medium active:scale-[0.98] transition-transform shadow-sm">Check-out</button>
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'available' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'check_in', status:'completed', condition:'good', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-4 py-4 rounded-2xl bg-gray-100 text-sm font-medium active:scale-[0.98] transition-transform shadow-sm">Check-in</button>
+                  <button onClick={async ()=>{ const gps=await getGPS(); commitUpdateAsset(asset.id, { status: 'maintenance' }); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: asset.id, type:'maintenance', status:'open', gps_lat:gps.lat, gps_lng:gps.lng }); }} className="px-4 py-4 rounded-2xl bg-orange-100 text-orange-800 text-sm font-medium active:scale-[0.98] transition-transform shadow-sm">Maintenance</button>
+                  <button onClick={()=>{ setAssetEditId(asset.id); setEditForm({ name: asset.name, asset_tag: asset.asset_tag, image_url: asset.image_url || '', category_id: asset.category_id || '' }); }} className="px-4 py-4 rounded-2xl bg-blue-100 text-blue-800 text-sm font-medium active:scale-[0.98] transition-transform shadow-sm">Edit</button>
                 </div>
                 <div className="mt-2 flex items-center space-x-2 text-xs">
                   <span className="text-gray-500">Condition:</span>
@@ -474,12 +475,12 @@ export default function MobileApp() {
         )}
 
         {tab==='nfc' && (
-          <NFCTab assets={assets} updateAsset={commitUpdateAsset} onOpenAsset={openAssetModal} />
+          <NFCTab assets={assets} updateAsset={commitUpdateAsset} onOpenAsset={openAssetModal} getGPS={getGPS} commitAddActivity={commitAddActivity} user={user} filterClientId={filterClientId} />
         )}
 
         {tab==='reports' && (
           <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="text-sm font-semibold">Daily Report</div>
               <div className="mt-3">
                 <label className="text-xs text-gray-600">Filter by client</label>
@@ -884,32 +885,74 @@ function JobsTab({ jobs, addJob, updateJob, clients, assets, sites, onOpenJob, o
   );
 }
 
-function NFCTab({ assets, updateAsset, onOpenAsset }: { assets: any[]; updateAsset: any; onOpenAsset: (id: string)=>void }) {
+function NFCTab({ assets, updateAsset, onOpenAsset, getGPS, commitAddActivity, user, filterClientId }: { assets: any[]; updateAsset: any; onOpenAsset: (id: string)=>void; getGPS: ()=>Promise<{lat?: number; lng?: number}>; commitAddActivity: (payload: any)=>void; user: any; filterClientId: string }) {
   const [tag, setTag] = useState('');
   const [assetId, setAssetId] = useState('');
+  const [scanning, setScanning] = useState(false);
   return (
-    <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <div className="text-sm font-semibold mb-2">Write Tag</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input className="border border-gray-300 rounded px-3 py-2" placeholder="Tag text" value={tag} onChange={e=>setTag(e.target.value)} />
-          <select className="border border-gray-300 rounded px-3 py-2" value={assetId} onChange={e=>setAssetId(e.target.value)}>
+    <div className="space-y-6">
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <div className="text-base font-semibold mb-4">Write Tag</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input className="border border-gray-300 rounded-2xl px-4 py-4 text-base" placeholder="Tag text" value={tag} onChange={e=>setTag(e.target.value)} />
+          <select className="border border-gray-300 rounded-2xl px-4 py-4 text-base" value={assetId} onChange={e=>setAssetId(e.target.value)}>
             <option value="">Select asset</option>
             {assets.map(a=> <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </div>
-        <button className="mt-3 px-3 py-2 rounded bg-blue-600 text-white" onClick={()=>{ if(!assetId) return; updateAsset(assetId, { asset_tag: tag }); alert('Tag stored (demo). Program NFC with the Tap URL below for instant open.'); }}>Write</button>
-        <button className="mt-3 ml-2 px-3 py-2 rounded bg-blue-600 text-white" onClick={async ()=>{ try { if (!('NDEFReader' in window)) { alert('Web NFC not supported'); return; } const a = assets.find(x=>x.id===assetId); if (!a) { alert('Select asset'); return; } const org = window.location.pathname.split('/')[1] || 'demo-org'; const tapUrl = `${window.location.origin}/${org}/tech/mobile?scan=${encodeURIComponent(a.asset_tag || tag)}`; const ndef = new (window as any).NDEFReader(); await ndef.write({ records: [{ recordType: 'url', data: tapUrl }] }); alert('NFC tag written'); } catch { alert('Failed to write NFC'); } }}>Write to NFC (Web)</button>
+        <div className="mt-4 flex flex-col gap-3">
+          <button className="px-6 py-5 rounded-2xl bg-blue-600 text-white text-base font-medium active:scale-[0.98] transition-transform shadow-md" onClick={()=>{ if(!assetId) return; updateAsset(assetId, { asset_tag: tag }); alert('Tag stored (demo). Program NFC with the Tap URL below for instant open.'); }}>Write Tag</button>
+          <button className="px-6 py-5 rounded-2xl bg-blue-600 text-white text-base font-medium active:scale-[0.98] transition-transform shadow-md" onClick={async ()=>{ try { if (!('NDEFReader' in window)) { alert('Web NFC not supported'); return; } const a = assets.find(x=>x.id===assetId); if (!a) { alert('Select asset'); return; } const org = window.location.pathname.split('/')[1] || 'demo-org'; const tapUrl = `${window.location.origin}/${org}/tech/mobile?scan=${encodeURIComponent(a.asset_tag || tag)}`; const ndef = new (window as any).NDEFReader(); await ndef.write({ records: [{ recordType: 'url', data: tapUrl }] }); alert('NFC tag written'); } catch { alert('Failed to write NFC'); } }}>Write to NFC (Web)</button>
+        </div>
         {assetId && (
           <NfcTapHelper assets={assets} assetId={assetId} onOpenAsset={(id)=>{ const a=assets.find(x=>x.id===id); if(a) setTag(a.asset_tag||''); setAssetId(id); setTimeout(()=>{},0); }} />
         )}
       </div>
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <div className="text-sm font-semibold mb-2">Read Tag</div>
-        <input className="border border-gray-300 rounded px-3 py-2 w-full" placeholder="Enter tag to lookup" value={tag} onChange={e=>setTag(e.target.value)} />
-        <div className="mt-2 text-sm text-gray-600">{(() => { const a = assets.find(x=>x.asset_tag===tag); return a ? (<div className="flex items-center justify-between"><span>Found: {a.name}</span><button className="text-xs px-2 py-1 rounded bg-blue-600 text-white" onClick={()=>onOpenAsset(a.id)}>Open</button></div>) : 'No asset'; })()}</div>
-        <div className="mt-3">
-          <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={async ()=>{ try { if (!('NDEFReader' in window)) { alert('Web NFC not supported'); return; } const ndef = new (window as any).NDEFReader(); await ndef.scan(); ndef.onreading = async (evt: any) => { let url=''; for(const r of evt.message.records){ if(r.recordType==='url'){ try{ url = r.data; }catch{} } } if(url){ let scan=''; try{ const u=new URL(url); scan=u.searchParams.get('scan')||''; }catch{} const found = assets.find(x=>x.asset_tag===scan) || assets.find(x=>x.asset_tag===url); if(found){ const gps = await getGPS(); commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: found.id, type:'scan', status:'completed', gps_lat: gps.lat, gps_lng: gps.lng }); (window as any).openAssetModal?.(found.id); } } }; alert('Hold device near tag…'); } catch { alert('Failed to start NFC scan'); } }}>Start NFC Scan (Web)</button>
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 bg-blue-500 opacity-10 animate-pulse"></div>
+        <div className="relative z-10">
+          <div className="text-base font-semibold mb-4 flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+            Read Tag
+          </div>
+          <input className="border border-gray-300 rounded-2xl px-4 py-4 w-full text-base" placeholder="Enter tag to lookup" value={tag} onChange={e=>setTag(e.target.value)} />
+          <div className="mt-4 text-base text-gray-600">{(() => { const a = assets.find(x=>x.asset_tag===tag); return a ? (<div className="flex items-center justify-between p-4 bg-green-50 rounded-2xl"><span className="font-medium">Found: {a.name}</span><button className="text-sm px-4 py-3 rounded-2xl bg-blue-600 text-white font-medium active:scale-[0.98] transition-transform shadow-md" onClick={()=>onOpenAsset(a.id)}>Open</button></div>) : <div className="p-4 bg-gray-50 rounded-2xl text-center">No asset found</div>; })()}</div>
+          <div className="mt-4">
+            <button className={`w-full px-6 py-5 rounded-2xl text-base font-medium active:scale-[0.98] transition-transform shadow-md ${scanning ? 'bg-green-600 text-white animate-pulse' : 'bg-blue-600 text-white'}`} onClick={async ()=>{ 
+              setScanning(true);
+              try { 
+                if (!('NDEFReader' in window)) { alert('Web NFC not supported'); setScanning(false); return; } 
+                const ndef = new (window as any).NDEFReader(); 
+                await ndef.scan(); 
+                ndef.onreading = async (evt: any) => { 
+                  setScanning(false);
+                  let url=''; 
+                  for(const r of evt.message.records){ 
+                    if(r.recordType==='url'){ 
+                      try{ url = r.data; }catch{} 
+                    } 
+                  } 
+                  if(url){ 
+                    let scan=''; 
+                    try{ const u=new URL(url); scan=u.searchParams.get('scan')||''; }catch{} 
+                    const found = assets.find(x=>x.asset_tag===scan) || assets.find(x=>x.asset_tag===url); 
+                    if(found){ 
+                      const gps = await getGPS(); 
+                      commitAddActivity({ technician_id: user?.technician_id || 't1', client_id: filterClientId || undefined, asset_id: found.id, type:'scan', status:'completed', gps_lat: gps.lat, gps_lng: gps.lng }); 
+                      (window as any).openAssetModal?.(found.id); 
+                    } 
+                  } 
+                }; 
+                alert('Hold device near tag…'); 
+              } catch { 
+                setScanning(false);
+                alert('Failed to start NFC scan'); 
+              } 
+            }}>{scanning ? 'Scanning...' : 'Start NFC Scan (Web)'}</button>
+          </div>
         </div>
       </div>
     </div>

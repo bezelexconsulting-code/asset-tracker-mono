@@ -179,26 +179,33 @@ export function DataProvider({ org, children }: { org: string; children: React.R
         if (!mounted) return;
         setOrgId(oid);
         if (oid) {
-          // Fetch all data in parallel
-          const [clients, locations, assets, technicians, jobs, activities] = await Promise.all([
-            restGet('clients', oid),
-            restGet('locations', oid),
-            restGet('assets', oid),
-            (await supabase.rpc('get_technicians_by_slug', { p_slug: org })).data || [],
-            restGet('jobs', oid),
-            restGet('activities', oid),
-          ]);
-          
-          if (mounted) {
-            setState(prev => ({
-              ...prev,
-              clients: clients as Client[],
-              locations: locations as Location[],
-              assets: assets as Asset[],
-              technicians: (technicians as any[]).map((t: any) => ({ id: t.id, name: t.full_name || t.name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : (t.status || 'active'), username: t.username, password: t.password, must_reset_password: t.must_reset_password })),
-              jobs: jobs as Job[],
-              activities: activities as Activity[],
-            }));
+          // Fetch all data in parallel using RPCs for slug-aware queries
+          try {
+            const [clientsData, locationsData, assetsData, techniciansData, jobsData, activitiesData] = await Promise.all([
+              supabase.rpc('get_clients_by_slug', { p_slug: org }).then(r => r.data || []).catch(() => []),
+              supabase.rpc('get_locations_by_slug', { p_slug: org }).then(r => r.data || []).catch(() => []),
+              supabase.rpc('get_assets_by_slug', { p_slug: org }).then(r => r.data || []).catch(() => []),
+              supabase.rpc('get_technicians_by_slug', { p_slug: org }).then(r => r.data || []).catch(() => []),
+              restGet('jobs', oid).catch(() => []),
+              restGet('activities', oid).catch(() => []),
+            ]);
+            
+            if (mounted) {
+              setState(prev => ({
+                ...prev,
+                clients: (clientsData as any[]) || [],
+                locations: (locationsData as any[]) || [],
+                assets: (assetsData as any[]) || [],
+                technicians: ((techniciansData as any[]) || []).map((t: any) => ({ id: t.id, name: t.full_name || t.name, email: t.email, phone: t.phone, specialization: t.specialization, status: t.is_active ? 'active' : (t.status || 'active'), username: t.username, password: t.password, must_reset_password: t.must_reset_password })),
+                jobs: (jobsData as Job[]) || [],
+                activities: (activitiesData as Activity[]) || [],
+              }));
+            }
+          } catch (error) {
+            console.error('Error loading data:', error);
+            if (mounted) {
+              setState(prev => ({ ...prev }));
+            }
           }
 
           // Subscribe to realtime changes

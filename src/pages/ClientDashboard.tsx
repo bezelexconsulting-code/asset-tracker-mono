@@ -52,30 +52,52 @@ export default function ClientDashboard() {
 
     try {
       setLoading(true);
-      const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org);
-      const orgId = orgRow?.[0]?.id;
-      if (!orgId) { setAssignedAssets([]); setRecentActivity([]); setOverdueAssets([]); setStats([]); setLoading(false); return; }
       
-      // Assigned assets: show checked_out assets for this org
-      const { data: assignedData, error: assignedError } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('org_id', orgId)
-        .eq('status', 'checked_out')
-        .order('updated_at', { ascending: false });
+      // Use RPC to get assets by slug
+      const { data: allAssets, error: assetsError } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+      if (assetsError) throw assetsError;
+      
+      // Filter for checked out assets
+      const assignedData = (allAssets || []).filter((a: any) => a.status === 'checked_out').sort((a: any, b: any) => 
+        new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+      );
+      setAssignedAssets(assignedData);
 
-      if (assignedError) throw assignedError;
-      setAssignedAssets(assignedData || []);
-
-      // Load recent activity for this user
-      const { data: activityData, error: activityError } = await supabase
-        .from('transactions')
-        .select('*, asset:assets(name,asset_tag), from_location:locations(name), to_location:locations(name)')
-        .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (activityError) throw activityError;
+      // Load recent activity - try RPC first, fallback to direct query
+      let activityData: any[] = [];
+      try {
+        const { data: txRpc } = await supabase.rpc('get_transactions_by_slug', { p_slug: org, p_limit: 5 }).catch(() => ({ data: null }));
+        if (txRpc) {
+          activityData = txRpc;
+        } else {
+          // Fallback: get orgId and use direct query
+          const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org).limit(1);
+          const orgId = orgRow?.[0]?.id;
+          if (orgId) {
+            const { data: txData } = await supabase
+              .from('transactions')
+              .select('*, asset:assets(name,asset_tag), from_location:locations(name), to_location:locations(name)')
+              .eq('org_id', orgId)
+              .order('created_at', { ascending: false })
+              .limit(5);
+            activityData = txData || [];
+          }
+        }
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+        // Fallback: get orgId and use direct query
+        const { data: orgRow } = await supabase.from('organizations').select('id').eq('slug', org).limit(1);
+        const orgId = orgRow?.[0]?.id;
+        if (orgId) {
+          const { data: txData } = await supabase
+            .from('transactions')
+            .select('*, asset:assets(name,asset_tag), from_location:locations(name), to_location:locations(name)')
+            .eq('org_id', orgId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          activityData = txData || [];
+        }
+      }
       
       const formattedActivity: RecentActivity[] = (activityData || []).map((t: any) => ({
         id: t.id,
@@ -89,16 +111,13 @@ export default function ClientDashboard() {
 
       // Overdue assets: heuristic — checked_out more than 7 days ago
       const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-      const { data: overdueData, error: overdueError } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('org_id', orgId)
-        .eq('status', 'checked_out')
-        .lt('created_at', sevenDaysAgo)
-        .order('created_at', { ascending: true });
-
-      if (overdueError) throw overdueError;
-      setOverdueAssets(overdueData || []);
+      const overdueData = (allAssets || []).filter((a: any) => 
+        a.status === 'checked_out' && 
+        new Date(a.created_at || a.updated_at) < new Date(sevenDaysAgo)
+      ).sort((a: any, b: any) => 
+        new Date(a.created_at || a.updated_at).getTime() - new Date(b.created_at || b.updated_at).getTime()
+      );
+      setOverdueAssets(overdueData);
 
       // Calculate stats
       const stats: QuickStat[] = [

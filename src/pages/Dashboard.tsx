@@ -170,65 +170,118 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     (async () => {
-      const c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
-      const assetsCount = Number(c.assets || 0);
-      const checkedCount = Number(c.checked || 0);
-      const clientsCount = Number(c.clients || 0);
-      const techsCount = Number(c.technicians || 0);
-      if (assetsCount === 0 && clientsCount === 0 && techsCount === 0) {
-        const [a, t, cl] = await Promise.all([
-          restRpc<any[]>('get_assets_by_slug', { p_slug: org }),
-          restRpc<any[]>('get_technicians_by_slug', { p_slug: org }),
-          restRpc<any[]>('get_clients_by_slug', { p_slug: org }),
-        ]);
-        setCounts({ assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length, clients: cl.length, techs: t.length });
-      } else {
-        setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
-      }
-      if (orgId) {
-        const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
-        setRecent(tx || []);
-      } else {
+      try {
+        // Use orgId from OrganizationProvider for RPC calls
+        const resolvedOrgId = orgId || await resolveOrgId(org);
+        const c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+        const assetsCount = Number(c?.assets || 0);
+        const checkedCount = Number(c?.checked || 0);
+        const clientsCount = Number(c?.clients || 0);
+        const techsCount = Number(c?.technicians || 0);
+        if (assetsCount === 0 && clientsCount === 0 && techsCount === 0) {
+          const [a, t, cl] = await Promise.all([
+            restRpc<any[]>('get_assets_by_slug', { p_slug: org }, resolvedOrgId || undefined),
+            restRpc<any[]>('get_technicians_by_slug', { p_slug: org }, resolvedOrgId || undefined),
+            restRpc<any[]>('get_clients_by_slug', { p_slug: org }, resolvedOrgId || undefined),
+          ]);
+          setCounts({ assets: (a || []).length, checked: (a || []).filter((x:any)=> x.status==='checked_out').length, clients: (cl || []).length, techs: (t || []).length });
+        } else {
+          setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
+        }
+        // Use RPC for transactions if available, otherwise use direct query with orgId
+        if (resolvedOrgId) {
+          // Try to get transactions using RPC, fallback to direct query
+          try {
+            const { data: tx } = await supabase.rpc('get_transactions_by_slug', { p_slug: org, p_limit: 10 }).catch(() => ({ data: null }));
+            if (tx) {
+              setRecent(tx || []);
+            } else {
+              // Fallback to direct query
+              const { data: txData } = await supabase.from('transactions').select('*').eq('org_id', resolvedOrgId).order('created_at', { ascending: false }).limit(10);
+              setRecent(txData || []);
+            }
+          } catch {
+            // Fallback to direct query
+            const { data: txData } = await supabase.from('transactions').select('*').eq('org_id', resolvedOrgId).order('created_at', { ascending: false }).limit(10);
+            setRecent(txData || []);
+          }
+        } else {
+          setRecent([]);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 });
         setRecent([]);
       }
       })();
     const ch = supabase.channel(`dashboard_${org}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, async ()=>{
-        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
-        if (cj && (cj.assets || cj.checked)) {
-          setCounts((c)=> ({ ...c, assets: Number(cj.assets || c.assets), checked: Number(cj.checked || c.checked) }));
-        } else {
-          const data = await restRpc<any[]>('get_assets_by_slug', { p_slug: org });
-          const a = (data as any[]) || [];
-          setCounts((c)=> ({ ...c, assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length }));
+        try {
+          const resolvedOrgId = orgId || await resolveOrgId(org);
+          const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+          if (cj && (cj.assets || cj.checked)) {
+            setCounts((c)=> ({ ...c, assets: Number(cj.assets || c.assets), checked: Number(cj.checked || c.checked) }));
+          } else {
+            const data = await restRpc<any[]>('get_assets_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+            const a = (data as any[]) || [];
+            setCounts((c)=> ({ ...c, assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length }));
+          }
+        } catch (error) {
+          console.error('Error updating assets count:', error);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
-        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
-        if (cj && cj.technicians !== undefined) {
-          setCounts((c)=> ({ ...c, techs: Number(cj.technicians) }));
-        } else {
-          const data = await restRpc<any[]>('get_technicians_by_slug', { p_slug: org });
-          setCounts((c)=> ({ ...c, techs: Array.isArray(data) ? (data as any[]).length : c.techs }));
+        try {
+          const resolvedOrgId = orgId || await resolveOrgId(org);
+          const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+          if (cj && cj.technicians !== undefined) {
+            setCounts((c)=> ({ ...c, techs: Number(cj.technicians) }));
+          } else {
+            const data = await restRpc<any[]>('get_technicians_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+            setCounts((c)=> ({ ...c, techs: Array.isArray(data) ? (data as any[]).length : c.techs }));
+          }
+        } catch (error) {
+          console.error('Error updating technicians count:', error);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
-        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
-        if (cj && cj.clients !== undefined) {
-          setCounts((c)=> ({ ...c, clients: Number(cj.clients) }));
-        } else {
-          const data = await restRpc<any[]>('get_clients_by_slug', { p_slug: org });
-          setCounts((c)=> ({ ...c, clients: Array.isArray(data) ? (data as any[]).length : c.clients }));
+        try {
+          const resolvedOrgId = orgId || await resolveOrgId(org);
+          const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+          if (cj && cj.clients !== undefined) {
+            setCounts((c)=> ({ ...c, clients: Number(cj.clients) }));
+          } else {
+            const data = await restRpc<any[]>('get_clients_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+            setCounts((c)=> ({ ...c, clients: Array.isArray(data) ? (data as any[]).length : c.clients }));
+          }
+        } catch (error) {
+          console.error('Error updating clients count:', error);
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, async ()=>{
-        if (!orgId) return;
-        const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
-        setRecent(tx || []);
+        try {
+          const resolvedOrgId = orgId || await resolveOrgId(org);
+          if (!resolvedOrgId) return;
+          // Try RPC first, fallback to direct query
+          try {
+            const { data: tx } = await supabase.rpc('get_transactions_by_slug', { p_slug: org, p_limit: 10 }).catch(() => ({ data: null }));
+            if (tx) {
+              setRecent(tx || []);
+            } else {
+              const { data: txData } = await supabase.from('transactions').select('*').eq('org_id', resolvedOrgId).order('created_at', { ascending: false }).limit(10);
+              setRecent(txData || []);
+            }
+          } catch {
+            const { data: txData } = await supabase.from('transactions').select('*').eq('org_id', resolvedOrgId).order('created_at', { ascending: false }).limit(10);
+            setRecent(txData || []);
+          }
+        } catch (error) {
+          console.error('Error updating transactions:', error);
+        }
       })
       .subscribe();
     return () => { try { supabase.removeChannel(ch); } catch {} };
-  }, [org]);
+  }, [org, orgId]);
 
   React.useEffect(() => {
     const localAssets = listAssets(undefined) || [];
