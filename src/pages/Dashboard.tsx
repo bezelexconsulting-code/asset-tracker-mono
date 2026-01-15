@@ -176,7 +176,19 @@ export default function Dashboard() {
       const checkedCount = Number(c.checked || 0);
       const clientsCount = Number(c.clients || 0);
       const techsCount = Number(c.technicians || 0);
-      setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
+      if (assetsCount === 0 && clientsCount === 0 && techsCount === 0) {
+        const [assetsBySlug, techsBySlug, clientsBySlug] = await Promise.all([
+          supabase.rpc('get_assets_by_slug', { p_slug: org }),
+          supabase.rpc('get_technicians_by_slug', { p_slug: org }),
+          supabase.rpc('get_clients_by_slug', { p_slug: org }),
+        ]);
+        const a = (assetsBySlug.data as any[]) || [];
+        const t = (techsBySlug.data as any[]) || [];
+        const cl = (clientsBySlug.data as any[]) || [];
+        setCounts({ assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length, clients: cl.length, techs: t.length });
+      } else {
+        setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
+      }
       const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
       setRecent(tx || []);
     })();
@@ -184,17 +196,33 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, async ()=>{
         const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
         const cj = (countsJson || {}) as any;
-        setCounts((c)=> ({ ...c, assets: Number(cj.assets || c.assets), checked: Number(cj.checked || c.checked) }));
+        if (cj && (cj.assets || cj.checked)) {
+          setCounts((c)=> ({ ...c, assets: Number(cj.assets || c.assets), checked: Number(cj.checked || c.checked) }));
+        } else {
+          const { data } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+          const a = (data as any[]) || [];
+          setCounts((c)=> ({ ...c, assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length }));
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
         const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
         const cj = (countsJson || {}) as any;
-        setCounts((c)=> ({ ...c, techs: Number(cj.technicians || c.techs) }));
+        if (cj && cj.technicians !== undefined) {
+          setCounts((c)=> ({ ...c, techs: Number(cj.technicians) }));
+        } else {
+          const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+          setCounts((c)=> ({ ...c, techs: Array.isArray(data) ? (data as any[]).length : c.techs }));
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
         const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
         const cj = (countsJson || {}) as any;
-        setCounts((c)=> ({ ...c, clients: Number(cj.clients || c.clients) }));
+        if (cj && cj.clients !== undefined) {
+          setCounts((c)=> ({ ...c, clients: Number(cj.clients) }));
+        } else {
+          const { data } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
+          setCounts((c)=> ({ ...c, clients: Array.isArray(data) ? (data as any[]).length : c.clients }));
+        }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, async ()=>{
         if (!orgId) return;
