@@ -11,7 +11,7 @@ import { QrCodeIcon, PlusIcon, ArrowRightCircleIcon, UsersIcon, BuildingOfficeIc
 export default function Dashboard() {
   const { org } = useParams();
   const { settings } = useSettings();
-  const { listActivities, listAssets, listClients, listJobs, listTechnicians } = useData() as any;
+  const { listActivities, listAssets, listClients, listJobs, listTechnicians, state } = useData() as any;
   const { orgId } = useOrganization();
   const greeting = 'Welcome';
   const [selectedAct, setSelectedAct] = React.useState<any | null>(null);
@@ -235,4 +235,14 @@ export default function Dashboard() {
       .subscribe();
     return () => { try { supabase.removeChannel(ch); } catch {} };
   }, [org]);
+
+  React.useEffect(() => {
+    const localAssets = listAssets(undefined) || [];
+    const localClients = listClients() || [];
+    const localTechs = listTechnicians() || [];
+    if ((counts.assets === 0 && counts.clients === 0 && counts.techs === 0) && (localAssets.length + localClients.length + localTechs.length > 0)) {
+      const checked = localAssets.filter((a:any)=> a.status==='checked_out').length;
+      setCounts({ assets: localAssets.length, checked, clients: localClients.length, techs: localTechs.length });
+    }
+  }, [state, listAssets, listClients, listTechnicians]);
 }
