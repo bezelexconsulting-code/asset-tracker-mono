@@ -48,6 +48,10 @@ export async function restRpc<T = any>(fn: string, payload: any, orgId?: string)
   if (!SUPABASE_CONFIGURED) return null as any;
   const url = `${supabaseUrl}/rest/v1/rpc/${fn}`;
   const res = await fetch(url, { method: 'POST', headers: baseHeaders(orgId), body: JSON.stringify(payload) });
-  if (!res.ok) throw new Error(`RPC ${fn} failed ${res.status}`);
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => 'Unknown error');
+    console.error(`RPC ${fn} failed ${res.status}:`, errorText);
+    throw new Error(`RPC ${fn} failed ${res.status}: ${errorText}`);
+  }
   return await res.json();
 }

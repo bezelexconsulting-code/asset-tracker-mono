@@ -173,18 +173,48 @@ export default function Dashboard() {
       try {
         // Use orgId from OrganizationProvider for RPC calls
         const resolvedOrgId = orgId || await resolveOrgId(org);
-        const c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined);
+        
+        // Try using supabase.rpc directly first (more reliable)
+        let c: any = null;
+        try {
+          const { data, error } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
+          if (error) {
+            console.warn('RPC get_dashboard_counts_by_slug error:', error);
+            // Fallback to restRpc
+            c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined).catch(() => null);
+          } else {
+            c = data;
+          }
+        } catch (err) {
+          console.warn('Supabase RPC failed, trying restRpc:', err);
+          c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org }, resolvedOrgId || undefined).catch(() => null);
+        }
+        
         const assetsCount = Number(c?.assets || 0);
         const checkedCount = Number(c?.checked || 0);
         const clientsCount = Number(c?.clients || 0);
         const techsCount = Number(c?.technicians || 0);
+        
         if (assetsCount === 0 && clientsCount === 0 && techsCount === 0) {
-          const [a, t, cl] = await Promise.all([
-            restRpc<any[]>('get_assets_by_slug', { p_slug: org }, resolvedOrgId || undefined),
-            restRpc<any[]>('get_technicians_by_slug', { p_slug: org }, resolvedOrgId || undefined),
-            restRpc<any[]>('get_clients_by_slug', { p_slug: org }, resolvedOrgId || undefined),
+          // Fallback: fetch directly using RPCs
+          const [aResult, tResult, clResult] = await Promise.all([
+            supabase.rpc('get_assets_by_slug', { p_slug: org }).catch(() => ({ data: null, error: null })),
+            supabase.rpc('get_technicians_by_slug', { p_slug: org }).catch(() => ({ data: null, error: null })),
+            supabase.rpc('get_clients_by_slug', { p_slug: org }).catch(() => ({ data: null, error: null })),
           ]);
-          setCounts({ assets: (a || []).length, checked: (a || []).filter((x:any)=> x.status==='checked_out').length, clients: (cl || []).length, techs: (t || []).length });
+          
+          const a = aResult.data || [];
+          const t = tResult.data || [];
+          const cl = clResult.data || [];
+          
+          console.log('Fetched directly:', { assets: a.length, techs: t.length, clients: cl.length });
+          
+          setCounts({ 
+            assets: a.length, 
+            checked: a.filter((x:any)=> x.status==='checked_out').length, 
+            clients: cl.length, 
+            techs: t.length 
+          });
         } else {
           setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
         }
