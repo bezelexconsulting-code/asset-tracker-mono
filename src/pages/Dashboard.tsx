@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { SUPABASE_CONFIGURED, supabase } from '../lib/supabase';
+import { restRpc } from '../lib/rest';
 import { resolveOrgId } from '../lib/org';
 import { useSettings } from '../contexts/SettingsContext';
 import { useData } from '../contexts/DataContext';
@@ -169,8 +170,7 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     (async () => {
-      const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
-      const c = (countsJson || {}) as any;
+      const c = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
       const assetsCount = Number(c.assets || 0);
       const checkedCount = Number(c.checked || 0);
       const clientsCount = Number(c.clients || 0);
@@ -194,36 +194,33 @@ export default function Dashboard() {
       } else {
         setRecent([]);
       }
-    })();
+      })();
     const ch = supabase.channel(`dashboard_${org}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, async ()=>{
-        const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
-        const cj = (countsJson || {}) as any;
+        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
         if (cj && (cj.assets || cj.checked)) {
           setCounts((c)=> ({ ...c, assets: Number(cj.assets || c.assets), checked: Number(cj.checked || c.checked) }));
         } else {
-          const { data } = await supabase.rpc('get_assets_by_slug', { p_slug: org });
+          const data = await restRpc<any[]>('get_assets_by_slug', { p_slug: org });
           const a = (data as any[]) || [];
           setCounts((c)=> ({ ...c, assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length }));
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, async ()=>{
-        const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
-        const cj = (countsJson || {}) as any;
+        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
         if (cj && cj.technicians !== undefined) {
           setCounts((c)=> ({ ...c, techs: Number(cj.technicians) }));
         } else {
-          const { data } = await supabase.rpc('get_technicians_by_slug', { p_slug: org });
+          const data = await restRpc<any[]>('get_technicians_by_slug', { p_slug: org });
           setCounts((c)=> ({ ...c, techs: Array.isArray(data) ? (data as any[]).length : c.techs }));
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, async ()=>{
-        const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
-        const cj = (countsJson || {}) as any;
+        const cj = await restRpc<any>('get_dashboard_counts_by_slug', { p_slug: org });
         if (cj && cj.clients !== undefined) {
           setCounts((c)=> ({ ...c, clients: Number(cj.clients) }));
         } else {
-          const { data } = await supabase.rpc('get_clients_by_slug', { p_slug: org });
+          const data = await restRpc<any[]>('get_clients_by_slug', { p_slug: org });
           setCounts((c)=> ({ ...c, clients: Array.isArray(data) ? (data as any[]).length : c.clients }));
         }
       })
