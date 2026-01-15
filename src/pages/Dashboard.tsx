@@ -176,14 +176,11 @@ export default function Dashboard() {
       const clientsCount = Number(c.clients || 0);
       const techsCount = Number(c.technicians || 0);
       if (assetsCount === 0 && clientsCount === 0 && techsCount === 0) {
-        const [assetsBySlug, techsBySlug, clientsBySlug] = await Promise.all([
-          supabase.rpc('get_assets_by_slug', { p_slug: org }),
-          supabase.rpc('get_technicians_by_slug', { p_slug: org }),
-          supabase.rpc('get_clients_by_slug', { p_slug: org }),
+        const [a, t, cl] = await Promise.all([
+          restRpc<any[]>('get_assets_by_slug', { p_slug: org }),
+          restRpc<any[]>('get_technicians_by_slug', { p_slug: org }),
+          restRpc<any[]>('get_clients_by_slug', { p_slug: org }),
         ]);
-        const a = (assetsBySlug.data as any[]) || [];
-        const t = (techsBySlug.data as any[]) || [];
-        const cl = (clientsBySlug.data as any[]) || [];
         setCounts({ assets: a.length, checked: a.filter((x:any)=> x.status==='checked_out').length, clients: cl.length, techs: t.length });
       } else {
         setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
