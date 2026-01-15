@@ -169,7 +169,6 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     (async () => {
-      if (!orgId) { setCounts({ assets: 0, checked: 0, clients: 0, techs: 0 }); setRecent([]); return; }
       const { data: countsJson } = await supabase.rpc('get_dashboard_counts_by_slug', { p_slug: org });
       const c = (countsJson || {}) as any;
       const assetsCount = Number(c.assets || 0);
@@ -189,8 +188,12 @@ export default function Dashboard() {
       } else {
         setCounts({ assets: assetsCount, checked: checkedCount, clients: clientsCount, techs: techsCount });
       }
-      const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
-      setRecent(tx || []);
+      if (orgId) {
+        const { data: tx } = await supabase.from('transactions').select('*').eq('org_id', orgId).order('created_at', { ascending: false }).limit(10);
+        setRecent(tx || []);
+      } else {
+        setRecent([]);
+      }
     })();
     const ch = supabase.channel(`dashboard_${org}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, async ()=>{
@@ -231,5 +234,5 @@ export default function Dashboard() {
       })
       .subscribe();
     return () => { try { supabase.removeChannel(ch); } catch {} };
-  }, [orgId]);
+  }, [org]);
 }
